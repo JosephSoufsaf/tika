@@ -353,3 +353,21 @@ Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours
 **Résultat :** avec ces 7 tests, le score de mutation de `MimeType` passe de 91 % (73/80) à **100 % (80/80)**.
 
 **Limite :** pour `matches`, le résultat est imposé par le mock ; ces deux tests vérifient surtout que `matches` délègue correctement à `matchesMagic`, et non la détection réelle par signature.
+
+# Exécution dans GitHub Actions
+
+Le workflow [`.github/workflows/tache2-tests.yml`](.github/workflows/tache2-tests.yml) s'exécute automatiquement à chaque push et à chaque pull request, sur toutes les branches qui le contiennent. Il peut aussi être lancé manuellement (« Run workflow »). Il effectue les étapes suivantes sur une machine Ubuntu :
+
+1. installation de Java 24 (Temurin), la version utilisée localement ;
+2. compilation de `tika-core` et de ses dépendances (`mvn -pl tika-core -am install -DskipTests`), qui applique aussi les vérifications de style de Tika (checkstyle) ;
+3. exécution de tous les nouveaux tests, générés et manuels, grâce au motif `MimeType_*_Test` :
+```
+   mvn -pl tika-core test -Dtest="MimeType_*_Test" -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+**Résultat :** les **32 nouveaux tests** (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](COLLER_ICI_LE_LIEN_DE_L_EXECUTION).
+
+**Corrections nécessaires pour que le build passe hors de la machine d'origine :**
+
+- **groupId de `chatunitest-starter`** : la dépendance était déclarée avec `io.github.zju-aces-ise` (minuscules), alors que l'artefact est publié sur Maven Central sous `io.github.ZJU-ACES-ISE`. Le build fonctionnait localement sous Windows, dont le système de fichiers ignore la casse et où l'artefact était déjà en cache, mais échouait sur une machine neuve et sous Linux (GitHub Actions). Le groupId a été corrigé dans `tika-core/pom.xml`.
+- **Imports `*` dans les fichiers de test** : les 8 classes générées par ChatUniTest, ainsi que `MimeType_survivors_Test`, utilisaient des imports génériques (`import static org.junit.jupiter.api.Assertions.*;`, `import org.mockito.*;`, etc.). La configuration checkstyle de Tika, qui s'applique aussi aux tests et fait échouer le build, interdit cette forme (règle `AvoidStarImport`, 33 erreurs). Les imports ont été remplacés par des imports explicites, sans modifier le code des tests.
