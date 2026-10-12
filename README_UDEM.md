@@ -90,7 +90,6 @@ Méthode visée : hasMagic(), qui retourne magics != null.
 | testHasMagicAfterAddingMagic | addMagic active hasMagic | un Magic simulé (mock) | addMagic crée la liste : true | Bon |
 | testHasMagicIgnoresNullMagic | addMagic(null) est ignoré | null | addMagic retourne sans effet si magic == null : false | Bon |
 
-Version brute (**Faux**) : when(mimeType.getMagics()).thenReturn(...) sur un objet réel, avec @Mock MediaType en paramètre du constructeur. Le LLM a traité MimeType comme un mock et a mal compris le contrat (hasMagic ne regarde pas getMagics()).
 
 #### MimeType_matchesMagic_18_1_Test (4 tests)
 
