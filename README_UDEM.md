@@ -365,7 +365,7 @@ Le workflow [`.github/workflows/tache2-tests.yml`](.github/workflows/tache2-test
    mvn -pl tika-core test -Dtest="MimeType_*_Test" -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-**Résultat :** les **32 nouveaux tests** (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](COLLER_ICI_LE_LIEN_DE_L_EXECUTION).
+**Résultat :** les **32 nouveaux tests** (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](https://github.com/JosephSoufsaf/tika/actions).
 
 **Corrections nécessaires pour que le build passe hors de la machine d'origine :**
 
