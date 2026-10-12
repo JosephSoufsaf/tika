@@ -236,6 +236,58 @@ mvn -pl tika-core org.pitest:pitest-maven:mutationCoverage
 
 Rapports : [avant](pit-reports-pre-additions/index.html) · [après tests générés](pit-reports-post-AI-additions/index.html) · [après tests manuels](pit-reports-post-manual-additions/index.html)
 
+# Documentation des mutants détectés par les tests générés
+
+En comparant les rapports PIT avant et après l'ajout des tests générés (page `MimeType.java`), **38 mutants passent à l'état KILLED** : 35 → 73 mutants tués sur 80. Pour chaque mutant, PIT n'enregistre que le **premier** test qui le tue ; un autre test pourrait aussi le détecter.
+
+| Méthode | Avant | Après tests générés | Nouveaux mutants tués |
+|---|---|---|---|
+| `isValid` | 0/30 (tous NO_COVERAGE) | 27/30 | 27 |
+| `matchesMagic` | 0/7 (tous NO_COVERAGE) | 7/7 | 7 |
+| `hasMagic` | 1/2 | 2/2 | 1 |
+| `compareTo` | 0/1 (SURVIVED) | 1/1 | 1 |
+| `equals` | 3/4 | 4/4 | 1 |
+| `hashCode` | 0/1 (NO_COVERAGE) | 1/1 | 1 |
+| **Total** | | | **38** |
+
+## `isValid` : 27 mutants tués
+
+Avant les tests générés, `isValid` n'était appelée par aucun test (ni par le reste du paquetage) : ses 30 mutants étaient NO_COVERAGE.
+
+- **16 conditions niées de la ligne 121** (`ch == '('` devient `ch != '('`, etc.), plus la condition niée `ch == '/'` (ligne 125), les 3 conditions niées de la ligne 126 et le retour remplacé par `false` (ligne 132), soit **21 mutants**. Tous sont tués par `testIsValid_withNameContainingValidCharactersAndSlash_returnsTrue` (`"text/plain"`). C'est le seul test où le résultat attendu est `true` : nier une comparaison de caractère fait rejeter une lettre ordinaire, et le mutant retourne `false` au lieu de `true`.
+- **Test `name == null` nié (ligne 114) et les 2 mutants de la boucle `i < name.length()` (ligne 119)** : tués par `testIsValid_withEmptyName_returnsFalse` (`""`). Avec le test nié, `""` (non nul) lève une exception ; avec `i <= length` ou la condition niée, la boucle lit `charAt(0)` sur une chaîne vide, ce qui lève `StringIndexOutOfBoundsException`.
+- **Retour `true` à la ligne 132** : tué par le même test ; `""` ne contient pas de slash et doit donner `false`.
+- **Retour `true` à la ligne 124** (caractère interdit) : tué par `testIsValid_withNameContainingInvalidCharacters_returnsFalse` ; le `;` de `"text/plain; charset=UTF-8"` doit provoquer `false`.
+- **Retour `true` à la ligne 127** (slash mal placé) : tué par `testIsValid_withNameStartingWithSlash_returnsFalse` (`"/text/plain"`).
+
+**3 mutants survivent** : les deux changements de borne de la ligne 121 (`ch <= ' '` et `ch >= 127`), car aucune entrée ne contient exactement un espace ou le caractère 127 comme seul défaut, et `i + 1` → `i - 1` (ligne 126), car les entrées terminées par un slash en contiennent deux et sont rejetées par le drapeau `slash` avant le test de position (évaluation court-circuitée du `||`). Ils sont traités dans la section [Tests supplémentaires](#tests-supplémentaires-écrits-à-la-main).
+
+## `matchesMagic` : 7 mutants tués
+
+Cette méthode n'était appelée par aucun test existant : la détection évalue directement les objets `Magic`. Les tests générés injectent deux `Magic` simulés.
+
+- **Condition `magics != null` niée (ligne 298)** : tuée par `testMatchesMagic_NoMagics`. Avec `magics == null`, le mutant entre dans la boucle et appelle `magics.size()` : `NullPointerException`.
+- **Condition `i < magics.size()` niée et incrément `i++` → `i--` (ligne 298)** : tués par `testMatchesMagic_MagicMatches`. Le premier mutant sort de la boucle sans rien évaluer et retourne `false` au lieu de `true` ; le second passe à l'indice -1 après le premier `Magic` : `IndexOutOfBoundsException`.
+- **Borne `<` → `<=` (ligne 298)** : tuée par `testMatchesMagic_MagicDoesNotMatch`. Aucun `Magic` ne correspond, la boucle va jusqu'à l'indice 2 d'une liste de taille 2 : `IndexOutOfBoundsException`.
+- **Retour `true` → `false` (ligne 301)** : tué par `testMatchesMagic_MagicMatches`, qui attend `true` quand le second `Magic` correspond.
+- **Retour `false` → `true` (ligne 304)** : tué par `testMatchesMagic_NoMagics`, qui attend `false` sans aucun `Magic`.
+- **Condition `magic.eval(data)` niée (ligne 300)** : attribuée à `testMatchesMagic_MagicMatches`, mais **pas grâce à son assertion**. Avec ce mutant, la méthode retourne `true` dès le premier `Magic` (qui retourne `false`), donc l'assertion `assertTrue` passe quand même. Le test échoue parce que le stub de `magic2` n'est jamais utilisé, ce que le mode strict de `MockitoExtension` signale comme une erreur. Le mutant serait aussi tué légitimement par `testMatchesMagic_MagicDoesNotMatch`, qui attend `false`.
+
+## Autres méthodes : 4 mutants tués
+
+- **`hasMagic`, retour remplacé par `true`** (SURVIVED avant) : tué par `testHasMagicIgnoresNullMagic`. Les tests originaux n'utilisaient que des types possédant des signatures ; ce test vérifie le cas `false` après `addMagic(null)`.
+- **`compareTo`, retour remplacé par `0`** (SURVIVED avant) : tué par `testCompareTo`, qui exige `< 0` et `> 0` pour deux types différents.
+- **`equals`, retour `false` → `true` pour un objet qui n'est pas un `MimeType`** (NO_COVERAGE avant) : tué par `testEqualsObject`, qui vérifie `equals(null)` et `equals(new Object())`.
+- **`hashCode`, retour remplacé par `0`** (NO_COVERAGE avant) : tué par `testHashCode`. Même si son oracle recopie l'implémentation (voir la critique des tests), il suffit à détecter ce mutant.
+
+## Tests générés sans effet sur le score
+
+Les 6 tests de `MimeType_matches_19_0_Test` et `MimeType_toString_25_0_Test` ne tuent **aucun nouveau mutant** : les mutants de `getType`, `isInterpreted`, `getLinks`, `getAcronym`, `getUniformTypeIdentifier` et `toString` étaient déjà tués par les tests originaux (`MimeTypesReaderTest`, `MimeDetectionTest`), et `getMinLength` ne produit aucun mutant. Cela confirme les verdicts « trivial » et « tautologique » de la critique.
+
+## Mutants restants
+
+Après les tests générés, 7 mutants ne sont toujours pas détectés : les 3 de `isValid` décrits plus haut, les 2 de `hasRootXML` (SURVIVED : son résultat n'est vérifié directement par aucun test) et les 2 de `matches` (NO_COVERAGE : aucun test généré n'appelle `matches()`). Ils sont tués par les tests manuels décrits dans la section [Tests supplémentaires](#tests-supplémentaires-écrits-à-la-main).
+
 # Tests supplémentaires (écrits à la main)
 
 Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours pas détectés : 3 dans `isValid` et 2 dans `hasRootXML` (SURVIVED), ainsi que 2 dans `matches` (NO_COVERAGE). Nous avons écrit un test par mutant, dans `tika-core/src/test/java/org/apache/tika/mime/MimeType_survivors_Test.java`. Chaque test utilise une entrée dont le **seul** défaut est celui que le mutant ignore : ainsi, seul le mutant change le résultat. Les oracles proviennent de la Javadoc, pas du code.
