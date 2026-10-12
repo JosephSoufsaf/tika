@@ -366,8 +366,3 @@ Le workflow [`.github/workflows/tache2-tests.yml`](.github/workflows/tache2-test
 ```
 
 **Résultat :** les **32 nouveaux tests** (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](https://github.com/JosephSoufsaf/tika/actions).
-
-**Corrections nécessaires pour que le build passe hors de la machine d'origine :**
-
-- **groupId de `chatunitest-starter`** : la dépendance était déclarée avec `io.github.zju-aces-ise` (minuscules), alors que l'artefact est publié sur Maven Central sous `io.github.ZJU-ACES-ISE`. Le build fonctionnait localement sous Windows, dont le système de fichiers ignore la casse et où l'artefact était déjà en cache, mais échouait sur une machine neuve et sous Linux (GitHub Actions). Le groupId a été corrigé dans `tika-core/pom.xml`.
-- **Imports `*` dans les fichiers de test** : les 8 classes générées par ChatUniTest, ainsi que `MimeType_survivors_Test`, utilisaient des imports génériques (`import static org.junit.jupiter.api.Assertions.*;`, `import org.mockito.*;`, etc.). La configuration checkstyle de Tika, qui s'applique aussi aux tests et fait échouer le build, interdit cette forme (règle `AvoidStarImport`, 33 erreurs). Les imports ont été remplacés par des imports explicites, sans modifier le code des tests.
