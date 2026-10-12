@@ -187,3 +187,53 @@ L'IA écrit 8 tests raisonnables, mais 6 mutants survivent. Les 3 tests manuels 
 - **Peu de tests manuels** (7) : cela ne montre pas qu'un humain couvrirait mieux seul, mais qu'un humain guidé par PIT comble ce que l'IA laisse passer.
 - **Les corrections de *src/test* sont aussi du travail humain** : *compareTo*, *hasMagic* et *matchesMagic* sont, dans la pratique, des oracles réparés à la main.
 - **Lecture statique** : les tests n'ont pas été exécutés, donc « faux » et « inexécutable » reposent sur l'analyse du code.
+
+# Analyse de mutation (PIT)
+
+PIT est intégré au pipeline Maven du module `tika-core` (`tika-core/pom.xml`), avec le plugin JUnit 5 requis par les tests de Tika :
+
+```xml
+<plugin>
+  <groupId>org.pitest</groupId>
+  <artifactId>pitest-maven</artifactId>
+  <version>1.30.0</version>
+  <dependencies>
+    <dependency>
+      <groupId>org.pitest</groupId>
+      <artifactId>pitest-junit5-plugin</artifactId>
+      <version>1.2.3</version>
+    </dependency>
+  </dependencies>
+  <configuration>
+    <targetClasses>
+      <param>org.apache.tika.mime.MimeType</param>
+      <param>org.apache.tika.mime.ProbabilisticMimeDetectionSelector</param>
+    </targetClasses>
+  </configuration>
+</plugin>
+```
+
+**Commande :**
+```
+mvn -pl tika-core org.pitest:pitest-maven:mutationCoverage
+```
+
+**Remarque sur `ProbabilisticMimeDetectionSelector` :** cette classe figurait dans la configuration initiale de PIT, lorsque nous comparions des candidats. Nous ne l'avons finalement pas retenue : aucun test n'a été généré ni écrit pour elle. Elle apparaît dans les trois rapports PIT, mais ses résultats restent identiques (63/122 mutants tués) et ne sont pas discutés. **Tous les scores ci-dessous concernent uniquement `MimeType`**, et non les totaux du paquetage.
+
+**Protocole :** la configuration de PIT est restée la même pour les trois exécutions. Seul le contenu de `src/test/java/org/apache/tika/mime/` a changé :
+
+1. **Tests originaux** : PIT est exécuté avant l'ajout de tout nouveau test.
+2. **+ tests générés** : les tests de ChatUniTest (corrigés) sont copiés depuis `chatunitest-tests/`, puis PIT est relancé.
+3. **+ tests manuels** : `MimeType_survivors_Test` est ajouté, puis PIT est relancé.
+
+### Résultats pour `MimeType`
+
+| Exécution | Couverture de lignes | Score de mutation | Force des tests |
+|---|---|---|---|
+| Tests originaux | 74 % (75/102) | **44 % (35/80)** | 90 % (35/39) |
+| + tests générés (ChatUniTest) | 94 % (96/102) | **91 % (73/80)** | 94 % (73/78) |
+| + tests manuels | 95 % (97/102) | **100 % (80/80)** | 100 % (80/80) |
+
+*La force des tests (test strength) ne compte que les mutants couverts par au moins un test. L'écart entre score de mutation et force des tests correspond aux mutants jamais exécutés (NO_COVERAGE) : 41 avant l'ajout de tests, 2 après les tests générés, 0 à la fin.*
+
+Rapports : [avant](pit-reports-pre-additions/index.html) · [après tests générés](pit-reports-post-AI-additions/index.html) · [après tests manuels](pit-reports-post-manual-additions/index.html)
