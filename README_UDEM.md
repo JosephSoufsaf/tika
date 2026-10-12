@@ -235,3 +235,53 @@ mvn -pl tika-core org.pitest:pitest-maven:mutationCoverage
 *La force des tests (test strength) ne compte que les mutants couverts par au moins un test. L'écart entre score de mutation et force des tests correspond aux mutants jamais exécutés (NO_COVERAGE) : 41 avant l'ajout de tests, 2 après les tests générés, 0 à la fin.*
 
 Rapports : [avant](pit-reports-pre-additions/index.html) · [après tests générés](pit-reports-post-AI-additions/index.html) · [après tests manuels](pit-reports-post-manual-additions/index.html)
+
+# Tests supplémentaires (écrits à la main)
+
+Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours pas détectés : 3 dans `isValid` et 2 dans `hasRootXML` (SURVIVED), ainsi que 2 dans `matches` (NO_COVERAGE). Nous avons écrit un test par mutant, dans `tika-core/src/test/java/org/apache/tika/mime/MimeType_survivors_Test.java`. Chaque test utilise une entrée dont le **seul** défaut est celui que le mutant ignore : ainsi, seul le mutant change le résultat. Les oracles proviennent de la Javadoc, pas du code.
+
+### 1. `testIsValid_spaceInsideNameIsRejected`
+- **Mutant visé :** `isValid`, ligne 121 : `ch <= ' '` devient `ch < ' '` (SURVIVED).
+- **Intention :** un espace est interdit dans un nom de type MIME, y compris dans le sous-type.
+- **Données :** `"text/pl ain"`. La structure est valide (un seul slash, ni au début ni à la fin) ; le seul défaut est l'espace (code 32), qui est exactement la valeur limite de la condition. Le mutant accepterait l'espace et retournerait `true`.
+- **Oracle :** la Javadoc définit `token := 1*<any (US-ASCII) CHAR except SPACE, CTLs, or tspecials>`. L'espace est exclu, donc `false`.
+
+### 2. `testIsValid_delCharacterIsRejected`
+- **Mutant visé :** `isValid`, ligne 121 : `ch >= 127` devient `ch > 127` (SURVIVED).
+- **Intention :** le caractère DEL (127), dernier caractère de contrôle US-ASCII, est refusé.
+- **Données :** `"text/pl" + (char) 127 + "ain"`. 127 est la valeur limite : `127 > 127` est faux, donc seul le mutant laisse passer ce caractère.
+- **Oracle :** la Javadoc exclut les CTLs (caractères de contrôle), qui sont en US-ASCII les codes 0 à 31 et 127. Donc `false`.
+
+### 3. `testIsValid_singleTrailingSlashIsRejected`
+- **Mutant visé :** `isValid`, ligne 126 : `i + 1 == name.length()` devient `i - 1 == name.length()` (SURVIVED).
+- **Intention :** un nom qui se termine par un slash unique est invalide (second token vide).
+- **Données :** `"text/"`, un seul slash, en dernière position. Les tests générés (`"text/plain/"`, `"text/plain//"`) contiennent deux slashes : ils sont rejetés par le drapeau `slash` avant que la position ne soit vérifiée (évaluation court-circuitée du `||`), d'où la survie du mutant.
+- **Oracle :** la grammaire `name := token "/" token`, avec un token d'au moins un caractère, impose au moins un caractère après le slash. Donc `false`.
+
+### 4. `testHasRootXML_falseWhenNoneRegistered`
+- **Mutants visés :** `hasRootXML`, ligne 268 : retour remplacé par `true`, et condition niée (SURVIVED).
+- **Intention :** un type fraîchement créé n'a aucune description rootXML.
+- **Données :** une instance neuve, sans appel à `addRootXML`. L'état initial est le cas qui distingue `true` de `false`.
+- **Oracle :** le champ `rootXML` vaut `null` par défaut, et `addRootXML` est le seul moyen de l'initialiser. Donc `false`.
+
+### 5. `testHasRootXML_trueAfterAddRootXML`
+- **Mutant visé :** `hasRootXML`, ligne 268 : condition niée (SURVIVED).
+- **Intention :** après un ajout, `hasRootXML()` retourne `true`.
+- **Données :** l'espace de noms XHTML et le nom local `"html"`, des valeurs réalistes. Le constructeur de `RootXML` exige qu'au moins l'un des deux soit non vide.
+- **Oracle :** selon la Javadoc de `addRootXML` (« Add some rootXML info to this mime-type »), un ajout réussi implique que le type possède du rootXML. Donc `true`.
+
+### 6. `testMatches_trueWhenAMagicMatches`
+- **Mutant visé :** `matches`, ligne 308 : retour remplacé par `false` (NO_COVERAGE).
+- **Intention :** `matches(data)` retourne `true` quand une signature magique reconnaît les données.
+- **Données :** un `Magic` simulé (Mockito) dont `eval(...)` retourne `true`, ajouté avec `addMagic`. Le résultat est ainsi contrôlé par le test, sans dépendre d'un vrai fichier.
+- **Oracle :** `matches` est vrai si et seulement si une signature correspond. Ici, la signature simulée correspond, donc `true`.
+
+### 7. `testMatches_falseWhenNoMagicMatches`
+- **Mutant visé :** `matches`, ligne 308 : retour remplacé par `true` (NO_COVERAGE).
+- **Intention :** `matches(data)` retourne `false` quand aucune signature ne correspond.
+- **Données :** un `Magic` simulé dont `eval(...)` retourne `false`.
+- **Oracle :** même contrat ; aucune signature ne correspond, donc `false`.
+
+**Résultat :** avec ces 7 tests, le score de mutation de `MimeType` passe de 91 % (73/80) à **100 % (80/80)**.
+
+**Limite :** pour `matches`, le résultat est imposé par le mock ; ces deux tests vérifient surtout que `matches` délègue correctement à `matchesMagic`, et non la détection réelle par signature.
