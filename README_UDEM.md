@@ -5,16 +5,12 @@ La classe choisie pour la génération des tests est MimeType.java. Nous avons s
 [Consulter le rapport PIT avant la génération des tests](tika-pit-reports%20-%20Before%20generated%20tests/org.apache.tika.mime/index.html)
 
 <br>
-<br>
-<br>
-<br>
-<br>
-<br>
+
 
 # ChatUniTest
 ChatUniTest est bel et bien installé dans le pipeline maven du module choisit(tika-core). Donc on voit bien le plug-in et son starter dans le pom.xml
 
-xml
+```
 <plugin>
   <groupId>org.pitest</groupId>
   <artifactId>pitest-maven</artifactId>
@@ -32,13 +28,8 @@ xml
     </targetClasses>
   </configuration>
 </plugin>
-
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
+```
+<br><br>
 
 
 # Les tests générés
@@ -49,12 +40,7 @@ Afin que Maven et PIT puissent les détecter et les exécuter dans le cadre des 
 
 Les tests générés par ChatUniTest compilent sans aucune correction : la compilation a réussi du premier coup. Les problèmes sont apparus à l'exécution. 15 tests échouaient parce que chatunitest-starter impose un byte-buddy 1.10.20 et un mockito-junit-jupiter 3.8.0, incompatibles avec mockito-core 5.23.0 et Java 24. Ce conflit de versions ne bloque pas la compilation, car l'API de Mockito utilisée par les tests existe bien, et il n'apparaît qu'à la création du premier mock. Une fois ces versions corrigées dans le pom, 4 méthodes de test dans 3 classes demandaient encore une correction de logique, car le modèle avait mal déduit les résultats attendus (compareTo, hasMagic et matchesMagic).
 
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
+<br><br>
 
 
 # Documentation tests
@@ -69,16 +55,15 @@ Les 8 tests générés par cette méthode ont deux défauts en communs : @Mock M
 
 | Test | Intention | Données | Oracle | Verdict |
 |------|-----------|---------|--------|---------|
-| ...withNullName_throwsIllegalArgumentException | isValid(null) lève une exception | null | Le code lève IllegalArgumentException | Bon (type d'exception, pas le message) |
-| ...withEmptyName_returnsFalse | Un nom vide est invalide | "" | Pas de /, donc le nom ne respecte pas la grammaire : false | Bon |
-| ...withNameContainingInvalidCharacters_returnsFalse | Un caractère interdit invalide le nom | "text/plain; charset=UTF-8" | ; est special : false | Moyen : donnée réaliste (en-tête Content-Type), mais le ; arrête la boucle, donc l'espace et le = qui suivent ne sont jamais testés |
-| ...withNameContainingValidCharactersAndSlash_returnsTrue | Un nom normal est valide | "text/plain" | Deux tokens non vides séparés par un / : true | Bon (le plus utile : tue la plupart des mutants de isValid) |
-| ...withNameStartingWithSlash_returnsFalse | Slash initial interdit | "/text/plain" | Premier token vide : false | Bon (teste la condition i == 0) |
-| ...withNameEndingWithSlash_returnsFalse | Slash final interdit | "text/plain/" | Second token vide : false | **Faible** : la donnée contient **deux** slashes, donc rejetée par le drapeau slash et non par la position finale. Le nom du test promet plus que ce qu'il vérifie. |
-| ...withNameContainingConsecutiveSlashes_returnsFalse | Deux slashes interdits | "text/plain//" | Un seul slash autorisé : false | Bon |
-| ...withNameContainingSlashAtStartAndEnd_returnsFalse | Slashes aux deux extrémités | "/text/plain/" | false | Faible : redondant avec le test du slash initial |
+| testIsValid_withNullName_throwsIllegalArgumentException | isValid(null) lève une exception | null | Le code lève IllegalArgumentException | Bon (type d'exception, pas le message) |
+| testIsValid_withEmptyName_returnsFalse | Un nom vide est invalide | "" | Pas de /, donc le nom ne respecte pas la grammaire : false | Bon |
+| testIsValid_withNameContainingInvalidCharacters_returnsFalse | Un caractère interdit invalide le nom | "text/plain; charset=UTF-8" | ; est special : false | Moyen : donnée réaliste (en-tête Content-Type), mais le ; arrête la boucle, donc l'espace et le = qui suivent ne sont jamais testés |
+| testIsValid_withNameContainingValidCharactersAndSlash_returnsTrue | Un nom normal est valide | "text/plain" | Deux tokens non vides séparés par un / : true | Bon (le plus utile : tue la plupart des mutants de isValid) |
+| testIsValid_withNameStartingWithSlash_returnsFalse | Slash initial interdit | "/text/plain" | Premier token vide : false | Bon (teste la condition i == 0) |
+| testIsValid_withNameEndingWithSlash_returnsFalse | Slash final interdit | "text/plain/" | Second token vide : false | **Faible** : la donnée contient **deux** slashes, donc rejetée par le drapeau slash et non par la position finale. Le nom du test promet plus que ce qu'il vérifie. |
+| testIsValid_withNameContainingConsecutiveSlashes_returnsFalse | Deux slashes interdits | "text/plain//" | Un seul slash autorisé : false | Bon |
+| testIsValid_withNameContainingSlashAtStartAndEnd_returnsFalse | Slashes aux deux extrémités | "/text/plain/" | false | Faible : redondant avec le test du slash initial |
 
-**Données absentes (cause des mutants survivants de la section « Documentation mutants ») :** espace, caractère DEL (127), un seul slash final.
 
 #### MimeType_hasMagic_17_0_Test (2 tests bruts, 3 tests après réécriture)
 
@@ -131,73 +116,74 @@ Conséquence : avant les tests manuels, matches() n'était couverte par aucun te
 
 ---
 
-### Critique qualitative des oracles
+# Comparaison qualitative des oracles : IA vs écrits à la main
 
-Répartition des 24 tests générés :
+**Projet :** *tika-core*, classe *org.apache.tika.mime.MimeType*
 
-| Catégorie | Tests | Exemples |
+**Corpus comparés**
+
+- **IA** : 8 classes de test générées par ChatUniTest (*chatunitest-tests/*), versions brutes.
+- **Manuel** : *MimeType_survivors_Test* (7 tests écrits pour tuer des mutants PIT survivants).
+- **Contexte** : les tests Tika amont (*MimeTypesReaderTest*, *MimeDetectionTest*, etc.) servent de référence mais ne sont pas comparés ici.
+
+**Méthode :** lecture du code des tests, du code source de *MimeType* et du rapport PIT. Les tests n'ont pas été exécutés ; les verdicts sur les tests IA viennent de la lecture.
+
+---
+
+## 1. Oracles générés par l'IA
+
+| Test | Ce qu'il vérifie | Verdict |
 |---|---|---|
-| Oracle pertinent et spécifique | 12 | les 8 tests de isValid (dont 2 de portée limitée, voir section « Documentation tests ») ; 3 tests de matchesMagic ; equals |
-| Oracle faux (version brute) | 4 | compareTo ; 2 tests hasMagic ; matchesMagic_ExceptionInMagic |
-| Vérification triviale ou recopiée du code | 6 | tests de matches_19_0 (valeurs par défaut) |
-| Oracle fragile ou tautologique | 2 | hashCode (couplé à l'implémentation), toString (assertion sur un stub) |
+| *isValid* (8 tests) | Chaîne vide, paramètres *; charset*, slash au début, à la fin ou doublé, *text/plain* valide | Pertinent et spécifique à la grammaire, mais entrées à défauts multiples et un seul cas valide |
+| *equals* | Même type, type différent, *null*, autre classe | Pertinent (contrat d'égalité) |
+| *compareTo* | *assertEquals(1, …)* et *assertEquals(-1, …)* | **Faux** : *"application/octet-stream".compareTo("text/plain")* vaut -19 (*'a' - 't'*), ni la valeur ni le signe ne sont bons |
+| *hashCode* | Égal à *"application/octet-stream".hashCode()* | Recopie l'implémentation (*MediaType.hashCode* fait exactement cela) |
+| *toString* | Stub un mock pour renvoyer *"application/pdf"*, puis l'assert | Tautologique : teste la configuration du mock |
+| *hasMagic* | *when(mimeType.getMagics())* sur un objet réel | Inexécutable (Mockito exige un mock) ; sémantique supposée contraire au code |
+| *matchesMagic* | Mocks, réflexion sur un champ privé, « exception ⇒ *true* » | Comportement inventé : le code propage l'exception |
+| *matches_19_0* | *getMinLength()==0*, *getAcronym()==""*, *getLinks()* vide… | Trivial et mal ciblé : n'appelle jamais *matches()* |
 
-Constats : 
-- **Forces :** les tests de isValid et de matchesMagic sont bien construits et spécifiques.
-- **Faiblesses :** le LLM infère les oracles du code (getMinLength == 0) ou les imagine (compareTo == 1) au lieu de les tirer d'une spécification ; il ne cible pas les valeurs limites ; il nomme des tests d'après une méthode qu'il n'appelle pas ; il utilise mal Mockito (when sur un objet réel, réflexion inutile).
-- **Comparaison avec les tests originaux :** [À COMPLÉTER : relire 2 ou 3 tests originaux, ex. MimeDetectionTest, MimeTypesReaderTest]. Les données du rapport montrent que ces tests tuent surtout les mutants des accesseurs et du chargement du registre MIME (voir section « Documentation mutants »), avec des fichiers réels : c'est un style d'intégration, plus spécifique, mais plus lent.
+**Corrections humaines dans *src/test*** : seuls *compareTo* (*<0* / *>0*), *hasMagic* (API réelle *addMagic*) et *matchesMagic* (*assertThrows*) ont été réparés. Les autres, y compris *toString* et *matches_19_0*, sont restés tels quels.
+
+---
+
+## 2. Oracles écrits à la main (*MimeType_survivors_Test*)
+
+| Test | Mutant visé | Oracle |
+|---|---|---|
+| *isValid("text/pl ain")* | *<=* devient *<* (ligne 121) | Javadoc : l'espace est exclu des tokens |
+| *isValid("text/pl" + (char) 127 + "ain")* | *>=* devient *>* (ligne 121) | Javadoc : DEL (127) est un caractère de contrôle |
+| *isValid("text/")* | *i + 1* devient *i - 1* (ligne 126) | Grammaire *token "/" token* : il faut au moins un caractère après le slash |
+| *hasRootXML()* sur objet neuf | Retour *true* / condition niée | *rootXML* est *null* par défaut, donc *false* |
+| *hasRootXML()* après *addRootXML* | Condition niée | Un ajout réussi implique *true* |
+| *matches(data)* avec un magic qui retourne *true* | Retour *false* (non couvert) | *matches* est vrai ssi une signature correspond |
+| *matches(data)* avec un magic qui retourne *false* | Retour *true* (non couvert) | Aucune signature ne correspond, donc *false* |
 
 <br>
+
+## 3. Comparaison point par point
+
+| Critère | IA (ChatUniTest) | Manuel (*survivors*) |
+|---|---|---|
+| Source de l'oracle | Signature, nom de méthode ou code : il recopie (*hashCode*, toString) ou devine (*compareTo*, exception) | Javadoc, citée dans chaque test |
+| Qualité des oracles | Sur 24 tests : environ 12 pertinents, 4 faux ou inexécutables, 8 triviaux ou tautologiques | 7 sur 7 pertinents |
+| Spécificité des données | Entrées à défauts multiples (*"text/plain//"*, *"/text/plain/"*) | Une entrée par règle |
+| Valeurs limites | Cas évidents seulement | Limites exactes (32, 127, dernier caractère) |
+| Traçabilité | Aucune | Mutant visé, intention, données, justification |
+| Étendue | Large (8 méthodes) | Étroite (*isValid*, *hasRootXML*, *matches*) |
+| Robustesse | Réflexion sur champ privé, stubs inutiles | Un mock simple par test |
+
+### Cas commun : *isValid*
+
+L'IA écrit 8 tests raisonnables, mais 6 mutants survivent. Les 3 tests manuels visent exactement ces mutants (espace seul, DEL à 127, slash final unique). Les tests IA rejetaient *"text/plain/"* et *"text/plain//"* grâce au drapeau « deux slashes » et non grâce au test de position, donc ils ne détectaient pas le mutant sur *i + 1 == length*.
+
 <br>
-<br>
-<br>
-<br>
-<br>
 
-# Tests supplémentaires
+## 4. Limites de la comparaison
 
-Fichier : tika-core/src/test/java/org/apache/tika/mime/MimeType_survivors_Test.java (7 tests). Chaque test a la même documentation en Javadoc dans le code. Les 7 mutants non tués de la section « Documentation mutants » sont tous tués au run D. Le rapport attribue 18 mutants à cette classe, car il crédite le premier test tueur : certains mutants déjà tués ont été re-crédités ici.
-
-### testIsValid_spaceInsideNameIsRejected
-- **Mutant ciblé :** isValid ligne 121, ch <= ' ' devient ch < ' ' (SURVIVED). Tué : 1 mutant.
-- **Intention :** un espace (code 32) est interdit dans un nom de type MIME.
-- **Données :** "text/pl ain". Structure valide (un seul slash, ni en première ni en dernière position) ; le seul défaut est l'espace. Le mutant l'accepterait et retournerait true.
-- **Oracle :** la Javadoc de isValid : token := 1*<US-ASCII sauf SPACE, CTLs, tspecials>. L'espace est exclu : false.
-
-### testIsValid_delCharacterIsRejected
-- **Mutant ciblé :** ligne 121, ch >= 127 devient ch > 127 (SURVIVED). Tué : 2 mutants (celui-ci et le retour forcé à true de la ligne 124).
-- **Intention :** le caractère DEL (127), dernier caractère de contrôle US-ASCII, est refusé.
-- **Données :** "text/pl" + (char) 127 + "ain". 127 est exactement la valeur limite ; seul le mutant la laisse passer.
-- **Oracle :** la Javadoc exclut les CTLs, qui valent 0 à 31 et 127 en US-ASCII : false.
-
-### testIsValid_singleTrailingSlashIsRejected
-- **Mutant ciblé :** ligne 126, i + 1 == name.length() devient i - 1 == name.length() (SURVIVED). Tué : 3 mutants (lignes 126 et 127).
-- **Intention :** un nom qui finit par un slash unique est invalide (second token vide).
-- **Données :** "text/". Un seul slash, en dernière position. Les tests existants ont deux slashes et sont rejetés par le drapeau slash, pas par la position.
-- **Oracle :** grammaire name := token "/" token avec token := 1*<caractère> : au moins un caractère après le slash : false.
-
-### testHasRootXML_falseWhenNoneRegistered
-- **Mutant ciblé :** ligne 268, hasRootXML retour true et condition négée (SURVIVED). Tué : 2 mutants.
-- **Intention :** un type neuf n'a aucun rootXML.
-- **Données :** instance neuve, sans appel à addRootXML (l'état initial distingue true de false).
-- **Oracle :** le champ rootXML est null par défaut et addRootXML est le seul moyen de l'initialiser : false.
-
-### testHasRootXML_trueAfterAddRootXML
-- **Mutant ciblé :** ligne 268, condition négée (SURVIVED). Tué : 1 mutant (ligne 250, condition de création de la liste dans addRootXML).
-- **Intention :** après l'ajout d'un rootXML, hasRootXML() retourne true.
-- **Données :** namespace http://www.w3.org/1999/xhtml, nom local html (valeurs réalistes ; le constructeur de RootXML exige qu'au moins l'un des deux soit non vide).
-- **Oracle :** « Add some rootXML info to this mime-type » : un ajout réussi implique que le type possède du rootXML : true.
-
-### testMatches_trueWhenAMagicMatches
-- **Mutant ciblé :** ligne 308, matches retour false (NO_COVERAGE). Tué : 3 mutants (lignes 298, 301 et 308).
-- **Intention :** matches(data) retourne true si une signature magique reconnaît les données.
-- **Données :** un Magic simulé dont eval(...) retourne true, ce qui impose le résultat sans dépendre d'un vrai fichier.
-- **Oracle :** matches est vrai si et seulement si une signature correspond ; ici elle correspond : true.
-
-### testMatches_falseWhenNoMagicMatches
-- **Mutant ciblé :** ligne 308, matches retour true (NO_COVERAGE). Tué : 6 mutants (lignes 283, 298 x2, 300, 304 et 308).
-- **Intention :** matches(data) retourne false si aucune signature ne correspond.
-- **Données :** un Magic simulé dont eval(...) retourne false.
-- **Oracle :** même contrat ; aucune signature ne correspond : false.
-
-**Vérification :** run D, MimeType : 80 mutants, 80 tués.
+- **Pas à armes égales** : les tests manuels ont été écrits après avoir vu les mutants survivants, alors que l'IA a travaillé sans ce retour.
+- **PIT ne note qu'un tueur par mutant** : les chiffres ci-dessus ne sont pas un crédit exclusif et dépendent de l'ordre d'exécution.
+- **Les tests manuels ne sont pas à l'abri de la tautologie** : pour *matches*, le résultat est imposé par le mock, donc on teste surtout la délégation.
+- **Peu de tests manuels** (7) : cela ne montre pas qu'un humain couvrirait mieux seul, mais qu'un humain guidé par PIT comble ce que l'IA laisse passer.
+- **Les corrections de *src/test* sont aussi du travail humain** : *compareTo*, *hasMagic* et *matchesMagic* sont, dans la pratique, des oracles réparés à la main.
+- **Lecture statique** : les tests n'ont pas été exécutés, donc « faux » et « inexécutable » reposent sur l'analyse du code.
