@@ -1,8 +1,6 @@
 # Classe à tester
 
-La classe choisie pour la génération des tests est MimeType.java. Nous avons sélectionné cette classe, car elle présentait un score de mutation de **44 % (35/80)**, ce qui indique qu'une proportion importante des mutants survivait aux tests existants. De plus, sa couverture de lignes était de **74 % (75/102)**, ce qui laissait une marge d'amélioration intéressante pour renforcer les tests de cette classe.
-
-[Consulter le rapport PIT avant la génération des tests](tika-pit-reports%20-%20Before%20generated%20tests/org.apache.tika.mime/index.html)
+La classe choisie pour la génération des tests est MimeType (`org.apache.tika.mime.MimeType`, module `tika-core`). Nous avons sélectionné cette classe, car elle présentait un score de mutation de **44 % (35/80)**, ce qui indique qu'une proportion importante des mutants survivait aux tests existants. De plus, sa couverture de lignes était de **74 % (75/102)**, ce qui laissait une marge d'amélioration intéressante pour renforcer les tests de cette classe. Les chiffres détaillés se trouvent dans la section [Analyse de mutation (PIT)](#analyse-de-mutation-pit).
 
 <br>
 
