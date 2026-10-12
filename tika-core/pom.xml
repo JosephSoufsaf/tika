@@ -120,7 +120,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>io.github.zju-aces-ise</groupId>
+        <groupId>io.github.ZJU-ACES-ISE</groupId>
         <artifactId>chatunitest-starter</artifactId>
         <version>1.4.0</version>
         <scope>test</scope>
