@@ -1,8 +1,23 @@
-# Classe à tester
+La classe choisie pour la génération des tests est `MimeType` (`org.apache.tika.mime.MimeType`, module `tika-core`). Nous avons sélectionné cette classe, car elle présentait un score de mutation de 44 % (35/80), ce qui indique qu'une proportion importante des mutants n'était pas détectée par les tests existants. De plus, sa couverture de lignes était de 74 % (75/102), ce qui laissait une marge d'amélioration intéressante pour renforcer les tests de cette classe. Les chiffres détaillés se trouvent dans la section [Analyse de mutation (PIT)](#analyse-de-mutation-pit).
 
-La classe choisie pour la génération des tests est MimeType (`org.apache.tika.mime.MimeType`, module `tika-core`). Nous avons sélectionné cette classe, car elle présentait un score de mutation de **44 % (35/80)**, ce qui indique qu'une proportion importante des mutants survivait aux tests existants. De plus, sa couverture de lignes était de **74 % (75/102)**, ce qui laissait une marge d'amélioration intéressante pour renforcer les tests de cette classe. Les chiffres détaillés se trouvent dans la section [Analyse de mutation (PIT)](#analyse-de-mutation-pit).
+Ces résultats s'expliquent par le fait que `MimeType` ne possède **aucune classe de test dédiée** : elle n'est testée qu'indirectement, à travers `MimeTypesReaderTest`, `MimeDetectionTest`, `PatternsTest`, `CustomReaderTest` et `ProbabilisticMimeDetectionTest`, qui manipulent des objets `MimeType` en testant la détection de types.
 
-<br>
+### Méthodes non couvertes ou avec des mutants vivants
+
+D'après le rapport PIT des tests originaux, **45 des 80 mutants** ne sont pas détectés : 41 ne sont jamais exécutés (NO_COVERAGE) et 4 sont exécutés sans qu'aucune assertion ne les détecte (SURVIVED).
+
+| Méthode | Mutants | État avec les tests originaux | Cause |
+|---|---|---|---|
+| `isValid` | 30 | 30 NO_COVERAGE | Méthode jamais appelée, ni par les tests ni par le reste du paquetage |
+| `matchesMagic` | 7 | 7 NO_COVERAGE | Jamais appelée : la détection évalue directement les objets `Magic` |
+| `matches` | 2 | 2 NO_COVERAGE | Jamais appelée (simple délégation à `matchesMagic`) |
+| `equals` | 4 | 1 NO_COVERAGE | Le cas « objet qui n'est pas un `MimeType` » n'est jamais testé |
+| `hashCode` | 1 | 1 NO_COVERAGE | Jamais appelée |
+| `hasRootXML` | 2 | 2 SURVIVED | Exécutée par `MimeTypes.add` et `init`, mais aucun test ne vérifie son résultat |
+| `hasMagic` | 2 | 1 SURVIVED | Seul le cas `true` est exercé ; le cas `false` n'est jamais vérifié |
+| `compareTo` | 1 | 1 SURVIVED | Exécutée lors du tri dans `MimeTypes.init`, mais le résultat n'est jamais vérifié |
+
+Enfin, `MimeType` se prête bien à la génération automatique de tests : c'est une classe de logique pure (validation de noms, comparaisons, accès aux signatures), sans entrées-sorties. Ses méthodes peuvent donc être testées isolément, sans fichiers de test, ce qui convient à un modèle de langage local de petite taille.
 
 
 # ChatUniTest
