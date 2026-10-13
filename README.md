@@ -21,7 +21,6 @@ D'après le rapport PIT des tests originaux, 45 des 80 mutants ne sont pas déte
 
 Enfin, `MimeType` se prête bien à la génération automatique de tests : c'est une classe de logique pure (validation de noms, comparaisons, accès aux signatures), sans entrées-sorties. Ses méthodes peuvent donc être testées isolément, sans fichiers de test, ce qui convient à un modèle de langage local de petite taille.
 
-
 # ChatUniTest
 ChatUniTest est bel et bien installé dans le pipeline maven du module choisi (tika-core). Donc on voit bien le plug-in et son starter dans le pom.xml.
 
@@ -50,6 +49,8 @@ ChatUniTest est bel et bien installé dans le pipeline maven du module choisi (t
         <type>pom</type>
     </dependency>
 ```
+
+Le modèle utilisé est **qwen2.5-coder** (7B), un modèle ouvert exécuté localement avec **Ollama**. Il a été téléchargé avec `ollama pull qwen2.5-coder`. Pendant la génération, Ollama tourne en arrière-plan et expose une API compatible OpenAI sur `http://localhost:11434/v1/chat/completions` ; le plugin ChatUniTest y envoie ses requêtes (paramètre `url`). Aucune clé d'API n'est nécessaire : la valeur de `apiKeys` est arbitraire.
 <br><br>
 
 # Les tests générés
@@ -59,9 +60,6 @@ Des tests ont bien été générés à l'aide de ChatUniTest. Par défaut, ils o
 Afin que Maven et PIT puissent les détecter et les exécuter dans le cadre des tests de mutation, les tests générés ont également été ajoutés au répertoire tika/tika-core/src/test/java/org/apache/tika/mime/.
 
 Les tests générés par ChatUniTest compilent sans aucune correction : la compilation a réussi du premier coup. Les problèmes sont apparus à l'exécution. 15 tests échouaient parce que chatunitest-starter impose un byte-buddy 1.10.20 et un mockito-junit-jupiter 3.8.0, incompatibles avec mockito-core 5.23.0 et Java 24. Ce conflit de versions ne bloque pas la compilation, car l'API de Mockito utilisée par les tests existe bien, et il n'apparaît qu'à la création du premier mock. Une fois ces versions corrigées dans le pom, 4 méthodes de test dans 3 classes demandaient encore une correction de logique, car le modèle avait mal déduit les résultats attendus (compareTo, hasMagic et matchesMagic).
-
-<br><br>
-
 
 # Documentation tests
 
