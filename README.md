@@ -82,7 +82,6 @@ Les 8 tests générés par cette méthode ont deux défauts en communs : @Mock M
 | testIsValid_withNameContainingConsecutiveSlashes_returnsFalse | Deux slashes interdits | "text/plain//" | Un seul slash autorisé : false | Bon |
 | testIsValid_withNameContainingSlashAtStartAndEnd_returnsFalse | Slashes aux deux extrémités | "/text/plain/" | false | Faible : redondant avec le test du slash initial |
 
-
 #### MimeType_hasMagic_17_0_Test (2 tests bruts, 3 tests après réécriture)
 
 Méthode visée : hasMagic(), qui retourne magics != null.
@@ -92,7 +91,6 @@ Méthode visée : hasMagic(), qui retourne magics != null.
 | testHasMagicWhenNoMagicAdded | Pas de magic au départ | new MimeType(OCTET_STREAM) | Le champ magics est null à la construction : false | Bon |
 | testHasMagicAfterAddingMagic | addMagic active hasMagic | un Magic simulé (mock) | addMagic crée la liste : true | Bon |
 | testHasMagicIgnoresNullMagic | addMagic(null) est ignoré | null | addMagic retourne sans effet si magic == null : false | Bon |
-
 
 #### MimeType_matchesMagic_18_1_Test (4 tests)
 
