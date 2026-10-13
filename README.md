@@ -2,11 +2,11 @@
 
 La classe choisie pour la génération des tests est `MimeType` (`org.apache.tika.mime.MimeType`, module `tika-core`). Nous avons sélectionné cette classe, car elle présentait un score de mutation de 44 % (35/80), ce qui indique qu'une proportion importante des mutants n'était pas détectée par les tests existants. De plus, sa couverture de lignes était de 74 % (75/102), ce qui laissait une marge d'amélioration intéressante pour renforcer les tests de cette classe. Les chiffres détaillés se trouvent dans la section [Analyse de mutation (PIT)](#analyse-de-mutation-pit).
 
-Ces résultats s'expliquent par le fait que `MimeType` ne possède **aucune classe de test dédiée** : elle n'est testée qu'indirectement, à travers `MimeTypesReaderTest`, `MimeDetectionTest`, `PatternsTest`, `CustomReaderTest` et `ProbabilisticMimeDetectionTest`, qui manipulent des objets `MimeType` en testant la détection de types.
+Ces résultats s'expliquent par le fait que `MimeType` ne possède aucune classe de test dédiée : elle n'est testée qu'indirectement, à travers `MimeTypesReaderTest`, `MimeDetectionTest`, `PatternsTest`, `CustomReaderTest` et `ProbabilisticMimeDetectionTest`, qui manipulent des objets `MimeType` en testant la détection de types.
 
 ### Méthodes non couvertes ou avec des mutants vivants
 
-D'après le rapport PIT des tests originaux, **45 des 80 mutants** ne sont pas détectés : 41 ne sont jamais exécutés (NO_COVERAGE) et 4 sont exécutés sans qu'aucune assertion ne les détecte (SURVIVED).
+D'après le rapport PIT des tests originaux, 45 des 80 mutants ne sont pas détectés : 41 ne sont jamais exécutés (NO_COVERAGE) et 4 sont exécutés sans qu'aucune assertion ne les détecte (SURVIVED).
 
 | Méthode | Mutants | État avec les tests originaux | Cause |
 |---|---|---|---|
@@ -23,29 +23,34 @@ Enfin, `MimeType` se prête bien à la génération automatique de tests : c'est
 
 
 # ChatUniTest
-ChatUniTest est bel et bien installé dans le pipeline maven du module choisit(tika-core). Donc on voit bien le plug-in et son starter dans le pom.xml
+ChatUniTest est bel et bien installé dans le pipeline maven du module choisi (tika-core). Donc on voit bien le plug-in et son starter dans le pom.xml.
 
+**Plugin :**
+```xml
+      <plugin>
+        <groupId>io.github.zju-aces-ise</groupId>
+        <artifactId>chatunitest-maven-plugin</artifactId>
+        <version>2.1.1</version>
+        <configuration>
+            <!-- Required: Use any string to replace your API keys -->
+            <apiKeys>xxx</apiKeys>
+            <model>code-llama</model>
+            <url>http://localhost:11434/v1/chat/completions</url>
+        </configuration>
+      </plugin>
 ```
-<plugin>
-  <groupId>org.pitest</groupId>
-  <artifactId>pitest-maven</artifactId>
-  <version>1.30.0</version>
-  <dependencies>
+
+**Dépendance requise par les tests générés :**
+```xml
     <dependency>
-      <groupId>org.pitest</groupId>
-      <artifactId>pitest-junit5-plugin</artifactId>
-      <version>1.2.3</version>
+        <groupId>io.github.ZJU-ACES-ISE</groupId>
+        <artifactId>chatunitest-starter</artifactId>
+        <version>1.4.0</version>
+        <scope>test</scope>
+        <type>pom</type>
     </dependency>
-  </dependencies>
-  <configuration>
-    <targetClasses>
-      <param>org.apache.tika.mime.MimeType</param>
-    </targetClasses>
-  </configuration>
-</plugin>
 ```
 <br><br>
-
 
 # Les tests générés
 
@@ -112,7 +117,7 @@ ChatUniTest a nommé la classe d'après matches, mais le LLM a testé d'autres m
 |---|---|---|---|
 | testConstructor | getType() retourne le type passé au constructeur | Le constructeur stocke le type | Faible (trivial) |
 | testGetMinLength | getMinLength() == 0 | Le champ vaut 0 (final int minLength = 0) | Faible : oracle recopié du code |
-| testSetInterpreted | setInterpreted(true) puis isInterpreted() vrai | Un setter suivi de son getter | Moyen (tue le mutant « return false » d'isInterpreted) |
+| testSetInterpreted | setInterpreted(true) puis isInterpreted() vrai | Un setter suivi de son getter | Moyen (vérifie un vrai comportement (setter/getter), mais le mutant d'isInterpreted était déjà tué par les tests originaux) |
 | testGetLinks | La liste des liens est vide au départ | Javadoc : « will never be null » | Moyen |
 | testGetAcronym | L'acronyme vaut "" au départ | Valeur initiale du code | Faible |
 | testGetUniformTypeIdentifier | L'UTI vaut "" au départ | Valeur initiale du code | Faible |
@@ -123,7 +128,7 @@ Conséquence : avant les tests manuels, matches() n'était couverte par aucun te
 
 | Test | Intention | Données | Oracle | Verdict |
 |---|---|---|---|---|
-| MimeType_compareTo_22_0_Test.testCompareTo | Relation d'ordre entre deux types | application/octet-stream et text/plain | Contrat Comparable : 0 pour soi-même, signe selon l'ordre lexicographique (application < text) | Brut **Faux** (1 et -1 exacts, signes inversés), corrigé en signes |
+| MimeType_compareTo_22_0_Test.testCompareTo | Relation d'ordre entre deux types | application/octet-stream et text/plain | Contrat Comparable : 0 pour soi-même, signe selon l'ordre lexicographique (application < text) | Brut **Faux** (valeurs exactes 1 et -1, signes inversés par rapport au résultat réel -19), corrigé en signes |
 | MimeType_equals_23_0_Test.testEqualsObject | Contrat d'equals | image/jpeg identique, text/plain, null, new Object() | Égalité sur le type seul ; null et autre classe : false | Bon pour la couverture des branches ; Faible en diagnostic (4 assertions dans un test) ; ne vérifie ni symétrie ni lien avec hashCode |
 | MimeType_hashCode_24_0_Test.testHashCode | hashCode() cohérent avec le type | application/octet-stream | Attendu : "application/octet-stream".hashCode() | **Faible** : l'oracle suppose un détail d'implémentation de MediaType. Le contrat serait « objets égaux, même hashCode ». |
 | MimeType_toString_25_0_Test.testToString | toString() retourne le nom du type | MediaType simulé, toString() stubbé à "application/pdf" | Délégation à type.toString() | **Faible (tautologique)** : le test affirme ce qu'il a lui-même stubbé |
@@ -140,7 +145,7 @@ Conséquence : avant les tests manuels, matches() n'était couverte par aucun te
 - **Manuel** : *MimeType_survivors_Test* (7 tests écrits pour tuer des mutants PIT survivants).
 - **Contexte** : les tests Tika amont (*MimeTypesReaderTest*, *MimeDetectionTest*, etc.) servent de référence mais ne sont pas comparés ici.
 
-**Méthode :** lecture du code des tests, du code source de *MimeType* et du rapport PIT. Les tests n'ont pas été exécutés ; les verdicts sur les tests IA viennent de la lecture.
+**Méthode :** lecture du code des tests, du code source de *MimeType* et du rapport PIT. Les verdicts sur les tests IA viennent de la lecture.
 
 ---
 
@@ -189,7 +194,7 @@ Conséquence : avant les tests manuels, matches() n'était couverte par aucun te
 
 ### Cas commun : *isValid*
 
-L'IA écrit 8 tests raisonnables, mais 6 mutants survivent. Les 3 tests manuels visent exactement ces mutants (espace seul, DEL à 127, slash final unique). Les tests IA rejetaient *"text/plain/"* et *"text/plain//"* grâce au drapeau « deux slashes » et non grâce au test de position, donc ils ne détectaient pas le mutant sur *i + 1 == length*.
+L'IA écrit 8 tests raisonnables, mais 3 mutants survivent. Les 3 tests manuels visent exactement ces mutants (espace seul, DEL à 127, slash final unique). Les tests IA rejetaient *"text/plain/"* et *"text/plain//"* grâce au drapeau « deux slashes » et non grâce au test de position, donc ils ne détectaient pas le mutant sur *i + 1 == length*.
 
 <br>
 
@@ -200,31 +205,30 @@ L'IA écrit 8 tests raisonnables, mais 6 mutants survivent. Les 3 tests manuels 
 - **Les tests manuels ne sont pas à l'abri de la tautologie** : pour *matches*, le résultat est imposé par le mock, donc on teste surtout la délégation.
 - **Peu de tests manuels** (7) : cela ne montre pas qu'un humain couvrirait mieux seul, mais qu'un humain guidé par PIT comble ce que l'IA laisse passer.
 - **Les corrections de *src/test* sont aussi du travail humain** : *compareTo*, *hasMagic* et *matchesMagic* sont, dans la pratique, des oracles réparés à la main.
-- **Lecture statique** : les tests n'ont pas été exécutés, donc « faux » et « inexécutable » reposent sur l'analyse du code.
 
 # Analyse de mutation (PIT)
 
 PIT est intégré au pipeline Maven du module `tika-core` (`tika-core/pom.xml`), avec le plugin JUnit 5 requis par les tests de Tika :
 
 ```xml
-<plugin>
-  <groupId>org.pitest</groupId>
-  <artifactId>pitest-maven</artifactId>
-  <version>1.30.0</version>
-  <dependencies>
-    <dependency>
-      <groupId>org.pitest</groupId>
-      <artifactId>pitest-junit5-plugin</artifactId>
-      <version>1.2.3</version>
-    </dependency>
-  </dependencies>
-  <configuration>
-    <targetClasses>
-      <param>org.apache.tika.mime.MimeType</param>
-      <param>org.apache.tika.mime.ProbabilisticMimeDetectionSelector</param>
-    </targetClasses>
-  </configuration>
-</plugin>
+      <plugin>
+          <groupId>org.pitest</groupId>
+          <artifactId>pitest-maven</artifactId>
+          <version>1.30.0</version>
+          <dependencies>
+              <dependency>
+                  <groupId>org.pitest</groupId>
+                  <artifactId>pitest-junit5-plugin</artifactId>
+                  <version>1.2.3</version>
+              </dependency>
+          </dependencies>
+          <configuration>
+              <targetClasses>
+                <param>org.apache.tika.mime.MimeType</param>
+                <param>org.apache.tika.mime.ProbabilisticMimeDetectionSelector</param>
+              </targetClasses>
+          </configuration>
+      </plugin>
 ```
 
 **Commande :**
@@ -232,7 +236,7 @@ PIT est intégré au pipeline Maven du module `tika-core` (`tika-core/pom.xml`),
 mvn -pl tika-core org.pitest:pitest-maven:mutationCoverage
 ```
 
-**Remarque sur `ProbabilisticMimeDetectionSelector` :** cette classe figurait dans la configuration initiale de PIT, lorsque nous comparions des candidats. Nous ne l'avons finalement pas retenue : aucun test n'a été généré ni écrit pour elle. Elle apparaît dans les trois rapports PIT, mais ses résultats restent identiques (63/122 mutants tués) et ne sont pas discutés. **Tous les scores ci-dessous concernent uniquement `MimeType`**, et non les totaux du paquetage.
+**Remarque sur `ProbabilisticMimeDetectionSelector` :** cette classe figurait dans la configuration initiale de PIT, lorsque nous comparions des candidats. Nous ne l'avons finalement pas retenue : aucun test n'a été généré ni écrit pour elle. Elle apparaît dans les trois rapports PIT, mais ses résultats restent identiques (63/122 mutants tués) et ne sont pas discutés. Tous les scores ci-dessous concernent uniquement `MimeType`, et non les totaux du paquetage.
 
 **Protocole :** la configuration de PIT est restée la même pour les trois exécutions. Seul le contenu de `src/test/java/org/apache/tika/mime/` a changé :
 
@@ -254,7 +258,7 @@ Rapports : [avant](pit-reports-pre-additions/index.html) · [après tests géné
 
 # Documentation des mutants détectés par les tests générés
 
-En comparant les rapports PIT avant et après l'ajout des tests générés (page `MimeType.java`), **38 mutants passent à l'état KILLED** : 35 → 73 mutants tués sur 80. Pour chaque mutant, PIT n'enregistre que le **premier** test qui le tue ; un autre test pourrait aussi le détecter.
+En comparant les rapports PIT avant et après l'ajout des tests générés (page `MimeType.java`), 38 mutants passent à l'état KILLED : 35 → 73 mutants tués sur 80. Pour chaque mutant, PIT n'enregistre que le premier test qui le tue ; un autre test pourrait aussi le détecter.
 
 | Méthode | Avant | Après tests générés | Nouveaux mutants tués |
 |---|---|---|---|
@@ -270,7 +274,7 @@ En comparant les rapports PIT avant et après l'ajout des tests générés (page
 
 Avant les tests générés, `isValid` n'était appelée par aucun test (ni par le reste du paquetage) : ses 30 mutants étaient NO_COVERAGE.
 
-- **16 conditions niées de la ligne 121** (`ch == '('` devient `ch != '('`, etc.), plus la condition niée `ch == '/'` (ligne 125), les 3 conditions niées de la ligne 126 et le retour remplacé par `false` (ligne 132), soit **21 mutants**. Tous sont tués par `testIsValid_withNameContainingValidCharactersAndSlash_returnsTrue` (`"text/plain"`). C'est le seul test où le résultat attendu est `true` : nier une comparaison de caractère fait rejeter une lettre ordinaire, et le mutant retourne `false` au lieu de `true`.
+- **16 conditions niées de la ligne 121** (`ch == '('` devient `ch != '('`, etc.), plus la condition niée `ch == '/'` (ligne 125), les 3 conditions niées de la ligne 126 et le retour remplacé par `false` (ligne 132), soit 21 mutants. Tous sont tués par `testIsValid_withNameContainingValidCharactersAndSlash_returnsTrue` (`"text/plain"`). C'est le seul test où le résultat attendu est `true` : nier une comparaison de caractère fait rejeter une lettre ordinaire, et le mutant retourne `false` au lieu de `true`.
 - **Test `name == null` nié (ligne 114) et les 2 mutants de la boucle `i < name.length()` (ligne 119)** : tués par `testIsValid_withEmptyName_returnsFalse` (`""`). Avec le test nié, `""` (non nul) lève une exception ; avec `i <= length` ou la condition niée, la boucle lit `charAt(0)` sur une chaîne vide, ce qui lève `StringIndexOutOfBoundsException`.
 - **Retour `true` à la ligne 132** : tué par le même test ; `""` ne contient pas de slash et doit donner `false`.
 - **Retour `true` à la ligne 124** (caractère interdit) : tué par `testIsValid_withNameContainingInvalidCharacters_returnsFalse` ; le `;` de `"text/plain; charset=UTF-8"` doit provoquer `false`.
@@ -287,7 +291,7 @@ Cette méthode n'était appelée par aucun test existant : la détection évalue
 - **Borne `<` → `<=` (ligne 298)** : tuée par `testMatchesMagic_MagicDoesNotMatch`. Aucun `Magic` ne correspond, la boucle va jusqu'à l'indice 2 d'une liste de taille 2 : `IndexOutOfBoundsException`.
 - **Retour `true` → `false` (ligne 301)** : tué par `testMatchesMagic_MagicMatches`, qui attend `true` quand le second `Magic` correspond.
 - **Retour `false` → `true` (ligne 304)** : tué par `testMatchesMagic_NoMagics`, qui attend `false` sans aucun `Magic`.
-- **Condition `magic.eval(data)` niée (ligne 300)** : attribuée à `testMatchesMagic_MagicMatches`, mais **pas grâce à son assertion**. Avec ce mutant, la méthode retourne `true` dès le premier `Magic` (qui retourne `false`), donc l'assertion `assertTrue` passe quand même. Le test échoue parce que le stub de `magic2` n'est jamais utilisé, ce que le mode strict de `MockitoExtension` signale comme une erreur. Le mutant serait aussi tué légitimement par `testMatchesMagic_MagicDoesNotMatch`, qui attend `false`.
+- **Condition `magic.eval(data)` niée (ligne 300)** : attribuée à `testMatchesMagic_MagicMatches`, mais pas grâce à son assertion. Avec ce mutant, la méthode retourne `true` dès le premier `Magic` (qui retourne `false`), donc l'assertion `assertTrue` passe quand même. Le test échoue parce que le stub de `magic2` n'est jamais utilisé, ce que le mode strict de `MockitoExtension` signale comme une erreur. Le mutant serait aussi tué légitimement par `testMatchesMagic_MagicDoesNotMatch`, qui attend `false`.
 
 ## Autres méthodes : 4 mutants tués
 
@@ -298,7 +302,7 @@ Cette méthode n'était appelée par aucun test existant : la détection évalue
 
 ## Tests générés sans effet sur le score
 
-Les 6 tests de `MimeType_matches_19_0_Test` et `MimeType_toString_25_0_Test` ne tuent **aucun nouveau mutant** : les mutants de `getType`, `isInterpreted`, `getLinks`, `getAcronym`, `getUniformTypeIdentifier` et `toString` étaient déjà tués par les tests originaux (`MimeTypesReaderTest`, `MimeDetectionTest`), et `getMinLength` ne produit aucun mutant. Cela confirme les verdicts « trivial » et « tautologique » de la critique.
+Les 6 tests de `MimeType_matches_19_0_Test` et `MimeType_toString_25_0_Test` ne tuent aucun nouveau mutant : les mutants de `getType`, `isInterpreted`, `getLinks`, `getAcronym`, `getUniformTypeIdentifier` et `toString` étaient déjà tués par les tests originaux (`MimeTypesReaderTest`, `MimeDetectionTest`), et `getMinLength` ne produit aucun mutant. Cela confirme les verdicts « trivial » et « tautologique » de la critique.
 
 ## Mutants restants
 
@@ -306,7 +310,7 @@ Après les tests générés, 7 mutants ne sont toujours pas détectés : les 3 d
 
 # Tests supplémentaires (écrits à la main)
 
-Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours pas détectés : 3 dans `isValid` et 2 dans `hasRootXML` (SURVIVED), ainsi que 2 dans `matches` (NO_COVERAGE). Nous avons écrit un test par mutant, dans `tika-core/src/test/java/org/apache/tika/mime/MimeType_survivors_Test.java`. Chaque test utilise une entrée dont le **seul** défaut est celui que le mutant ignore : ainsi, seul le mutant change le résultat. Les oracles proviennent de la Javadoc, pas du code.
+Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours pas détectés : 3 dans `isValid` et 2 dans `hasRootXML` (SURVIVED), ainsi que 2 dans `matches` (NO_COVERAGE). Nous avons écrit un test par mutant, dans `tika-core/src/test/java/org/apache/tika/mime/MimeType_survivors_Test.java`. Chaque test utilise une entrée dont le seul défaut est celui que le mutant ignore : ainsi, seul le mutant change le résultat. Les oracles proviennent de la Javadoc, pas du code.
 
 ### 1. `testIsValid_spaceInsideNameIsRejected`
 - **Mutant visé :** `isValid`, ligne 121 : `ch <= ' '` devient `ch < ' '` (SURVIVED).
@@ -350,7 +354,7 @@ Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours
 - **Données :** un `Magic` simulé dont `eval(...)` retourne `false`.
 - **Oracle :** même contrat ; aucune signature ne correspond, donc `false`.
 
-**Résultat :** avec ces 7 tests, le score de mutation de `MimeType` passe de 91 % (73/80) à **100 % (80/80)**.
+**Résultat :** avec ces 7 tests, le score de mutation de `MimeType` passe de 91 % (73/80) à 100 % (80/80).
 
 **Limite :** pour `matches`, le résultat est imposé par le mock ; ces deux tests vérifient surtout que `matches` délègue correctement à `matchesMagic`, et non la détection réelle par signature.
 
@@ -365,4 +369,4 @@ Le workflow [`.github/workflows/tache2-tests.yml`](.github/workflows/tache2-test
    mvn -pl tika-core test -Dtest="MimeType_*_Test" -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-**Résultat :** les **32 nouveaux tests** (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](https://github.com/JosephSoufsaf/tika/actions).
+**Résultat :** les 32 nouveaux tests (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](https://github.com/JosephSoufsaf/tika/actions).
