@@ -51,7 +51,6 @@ ChatUniTest est bel et bien installé dans le pipeline maven du module choisi (t
 ```
 
 Le modèle utilisé est **qwen2.5-coder** (7B), un modèle ouvert exécuté localement avec **Ollama**. Il a été téléchargé avec `ollama pull qwen2.5-coder`. Pendant la génération, Ollama tourne en arrière-plan et expose une API compatible OpenAI sur `http://localhost:11434/v1/chat/completions` ; le plugin ChatUniTest y envoie ses requêtes (paramètre `url`). Aucune clé d'API n'est nécessaire : la valeur de `apiKeys` est arbitraire.
-<br><br>
 
 # Les tests générés
 
@@ -174,7 +173,7 @@ Conséquence : avant les tests manuels, matches() n'était couverte par aucun te
 | *matches(data)* avec un magic qui retourne *true* | Retour *false* (non couvert) | *matches* est vrai ssi une signature correspond |
 | *matches(data)* avec un magic qui retourne *false* | Retour *true* (non couvert) | Aucune signature ne correspond, donc *false* |
 
-<br>
+---
 
 ## 3. Comparaison point par point
 
@@ -192,7 +191,7 @@ Conséquence : avant les tests manuels, matches() n'était couverte par aucun te
 
 L'IA écrit 8 tests raisonnables, mais 3 mutants survivent. Les 3 tests manuels visent exactement ces mutants (espace seul, DEL à 127, slash final unique). Les tests IA rejetaient *"text/plain/"* et *"text/plain//"* grâce au drapeau « deux slashes » et non grâce au test de position, donc ils ne détectaient pas le mutant sur *i + 1 == length*.
 
-<br>
+---
 
 ## 4. Limites de la comparaison
 
@@ -201,6 +200,8 @@ L'IA écrit 8 tests raisonnables, mais 3 mutants survivent. Les 3 tests manuels 
 - **Les tests manuels ne sont pas à l'abri de la tautologie** : pour *matches*, le résultat est imposé par le mock, donc on teste surtout la délégation.
 - **Peu de tests manuels** (7) : cela ne montre pas qu'un humain couvrirait mieux seul, mais qu'un humain guidé par PIT comble ce que l'IA laisse passer.
 - **Les corrections de *src/test* sont aussi du travail humain** : *compareTo*, *hasMagic* et *matchesMagic* sont, dans la pratique, des oracles réparés à la main.
+
+--- 
 
 # Analyse de mutation (PIT)
 
