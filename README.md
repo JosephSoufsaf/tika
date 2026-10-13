@@ -357,7 +357,7 @@ Après l'ajout des tests générés, 7 mutants de `MimeType` n'étaient toujours
 
 # Exécution dans GitHub Actions
 
-Le workflow [`.github/workflows/tache2-tests.yml`](.github/workflows/tache2-tests.yml) s'exécute automatiquement à chaque push et à chaque pull request, sur toutes les branches qui le contiennent. Il peut aussi être lancé manuellement (« Run workflow »). Il effectue les étapes suivantes sur une machine Ubuntu :
+Le [workflow](https://github.com/JosephSoufsaf/tika/blob/main/.github/workflows/tache2-tests.yml) s'exécute automatiquement à chaque push et à chaque pull request, sur toutes les branches qui le contiennent. Il peut aussi être lancé manuellement (« Run workflow »). Il effectue les étapes suivantes sur une machine Ubuntu :
 
 1. installation de Java 24 (Temurin), la version utilisée localement ;
 2. compilation de `tika-core` et de ses dépendances (`mvn -pl tika-core -am install -DskipTests`), qui applique aussi les vérifications de style de Tika (checkstyle) ;
