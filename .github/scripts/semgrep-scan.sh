@@ -4,7 +4,7 @@ then BASELINE_COMMIT_ID="${PR_BASE_COMMIT_ID}"
 else BASELINE_COMMIT_ID="${COMMIT_BEFORE_PUSH_ID}"
 fi
 
-# first push of a new branch so use parent
+# first push of a new branch
 if [ "${BASELINE_COMMIT_ID}" = "0000000000000000000000000000000000000000" ]; 
 then BASELINE_COMMIT_ID="$(git merge-base origin/main HEAD)"
 fi
