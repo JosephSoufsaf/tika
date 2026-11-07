@@ -367,3 +367,5 @@ Le [workflow](https://github.com/JosephSoufsaf/tika/blob/main/.github/workflows/
 ```
 
 **Résultat :** les 32 nouveaux tests (25 tests générés par ChatUniTest après correction, et 7 tests écrits à la main) s'exécutent avec succès : 0 échec, 0 erreur. [Voir l'exécution réussie](https://github.com/JosephSoufsaf/tika/actions). 
+
+TEST
