@@ -6,7 +6,7 @@ fi
 
 # first push of a new branch so use parent
 if [ "${BASELINE_COMMIT_ID}" = "0000000000000000000000000000000000000000" ]; 
-then BASELINE_COMMIT_ID="$(git rev-parse HEAD~1)"
+then BASELINE_COMMIT_ID="$(git merge-base origin/main HEAD)"
 fi
 
 # if there are findings absent from the baseline then fail (exit 1)
