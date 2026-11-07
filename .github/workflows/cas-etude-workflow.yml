@@ -1,4 +1,4 @@
-name: Tache 2 - tests MimeType
+name: Case Study CI - Tache 2 + Tache 3
 
 on:
   push:
@@ -6,21 +6,46 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  semgrep:
+    name: semgrep
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the code
+      - name: check out the code with full history (needed for the baseline commit)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: set up python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: install semgrep
+        run: pip install semgrep==1.183.0
+
+      - name: check for new vulnerabilities
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_COMMIT_ID: ${{ github.event.pull_request.base.sha }}
+          COMMIT_BEFORE_PUSH_ID: ${{ github.event.before }}
+        run: bash .github/scripts/semgrep-scan.sh
+
+  test:
+    name: build and test tika-core
+    runs-on: ubuntu-latest
+    steps:
+      - name: check out the code
         uses: actions/checkout@v4
 
-      - name: Set up Java 24
+      - name: set up Java 24
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '24'
           cache: maven
 
-      - name: Build tika-core and its dependencies
+      - name: build tika-core and its dependencies
         run: mvn -B -pl tika-core -am install -DskipTests
 
-      - name: Run the new tests (ChatUniTest + manual)
+      - name: run the new tests (ChatUniTest + manual)
         run: mvn -B -pl tika-core test -Dtest="MimeType_*_Test" -Dsurefire.failIfNoSpecifiedTests=false
