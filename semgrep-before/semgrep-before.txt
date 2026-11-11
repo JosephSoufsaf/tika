@@ -1,0 +1,88 @@
+                   
+                   
+┌─────────────────┐
+│ 8 Code Findings │
+└─────────────────┘
+                                                                                    
+  [36m[22m[24m  tika-core\src\main\java\org\apache\tika\config\ServiceLoader.java[0m
+    ❯❱ [1mjava.lang.security.audit.unsafe-reflection.unsafe-reflection[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          If an attacker can supply values that the application then uses to determine which class to        
+          instantiate or which method to invoke, the potential exists for the attacker to create control flow
+          paths through the application that were not intended by the application developers. This attack    
+          vector may allow the attacker to bypass authentication or access control checks or otherwise cause 
+          the application to behave in an unexpected manner.                                                 
+          Details: https://sg.run/R8X8                                                                       
+                                                                                                             
+          196┆ Class<?> klass = Class.forName(name, true, loader);
+                                                                                          
+  [36m[22m[24m  tika-core\src\main\java\org\apache\tika\detect\FileCommandDetector.java[0m
+   ❯❯❱ [1mjava.lang.security.audit.command-injection-process-builder.command-injection-process-builder[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          A formatted or concatenated string was detected as input to a ProcessBuilder call. This is dangerous
+          if a variable is controlled by user input and could result in a command injection. Ensure your      
+          variables are not controlled by users or sufficiently sanitized.                                    
+          Details: https://sg.run/gJJe                                                                        
+                                                                                                              
+          110┆ ProcessBuilder builder = new ProcessBuilder(args);
+                                                                                    
+  [36m[22m[24m  tika-core\src\main\java\org\apache\tika\mime\MimeTypesReader.java[0m
+   ❯❯❱ [1mjava.lang.security.audit.xxe.saxparserfactory-disallow-doctype-decl-missing.saxparserfactory-disallow-doctype-[0m
+  [1m     decl-missing[0m                                                                                                  
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          DOCTYPE declarations are enabled for this SAXParserFactory. This is vulnerable to XML external      
+          entity attacks. Disable this by setting the feature `http://apache.org/xml/features/disallow-       
+          doctype-decl` to true. Alternatively, allow DOCTYPE declarations and only prohibit external entities
+          declarations. This can be done by setting the features `http://xml.org/sax/features/external-       
+          general-entities` and `http://xml.org/sax/features/external-parameter-entities` to false. NOTE - The
+          previous links are not meant to be clicked. They are the literal config key values that are supposed
+          to be used to disable these features. For more information, see https://semgrep.dev/docs/cheat-     
+          sheets/java-xxe/#3a-documentbuilderfactory.                                                         
+          Details: https://sg.run/Gj32                                                                        
+                                                                                                              
+           [32m▶▶┆ Autofix ▶ [0mfactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+              factory.newSAXParser();                                                                     
+          223┆ return factory.newSAXParser();
+                                                                                    
+  [36m[22m[24m  tika-core\src\main\java\org\apache\tika\parser\NetworkParser.java[0m
+    ❯❱ [1mjava.lang.security.audit.crypto.unencrypted-socket.unencrypted-socket[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected use of a Java socket that is not encrypted. As a result, the traffic could be read by an
+          attacker intercepting the network traffic. Use an SSLSocket created by 'SSLSocketFactory' or     
+          'SSLServerSocketFactory' instead.                                                                
+          Details: https://sg.run/W8zA                                                                     
+                                                                                                           
+           68┆ try (Socket socket = new Socket(uri.getHost(), uri.getPort())) {
+                                                                                              
+  [36m[22m[24m  tika-core\src\main\java\org\apache\tika\parser\external\ExternalParser.java[0m
+   ❯❯❱ [1mjava.lang.security.audit.command-injection-process-builder.command-injection-process-builder[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          A formatted or concatenated string was detected as input to a ProcessBuilder call. This is dangerous
+          if a variable is controlled by user input and could result in a command injection. Ensure your      
+          variables are not controlled by users or sufficiently sanitized.                                    
+          Details: https://sg.run/gJJe                                                                        
+                                                                                                              
+          193┆ new ProcessBuilder(thisCommandLine),
+                                                                                    
+  [36m[22m[24m  tika-core\src\main\java\org\apache\tika\utils\XMLReaderUtils.java[0m
+    ❯❱ [1mjava.lang.security.xmlinputfactory-possible-xxe.xmlinputfactory-possible-xxe[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          XML external entities are not explicitly disabled for this XMLInputFactory. This could be vulnerable
+          to XML external entity vulnerabilities. Explicitly disable external entities by setting             
+          "javax.xml.stream.isSupportingExternalEntities" to false.                                           
+          Details: https://sg.run/XBwA                                                                        
+                                                                                                              
+          307┆ XMLInputFactory factory = XMLInputFactory.newFactory();
+   
+    ❯❱ [1mjava.lang.security.audit.unsafe-reflection.unsafe-reflection[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          If an attacker can supply values that the application then uses to determine which class to        
+          instantiate or which method to invoke, the potential exists for the attacker to create control flow
+          paths through the application that were not intended by the application developers. This attack    
+          vector may allow the attacker to bypass authentication or access control checks or otherwise cause 
+          the application to behave in an unexpected manner.                                                 
+          Details: https://sg.run/R8X8                                                                       
+                                                                                                             
+          828┆ Class.forName(securityManagerClassName).getDeclaredConstructor().newInstance();
+            ⋮┆----------------------------------------
+          872┆ Class.forName(securityManagerClassName).getDeclaredConstructor().newInstance();
