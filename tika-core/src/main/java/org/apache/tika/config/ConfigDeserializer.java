@@ -17,6 +17,9 @@
 package org.apache.tika.config;
 
 import java.lang.reflect.Method;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
 /**
  * Utility for deserializing JSON configuration without compile-time dependency on Jackson.
@@ -115,6 +118,21 @@ public class ConfigDeserializer {
             throw new RuntimeException("Failed to parse " + configClass.getSimpleName() +
                 " configuration: " + cause.getMessage(), cause);
         }
+    }
+
+    /**
+     * Evaluates a computed configuration value, for example "30 * 1000" for a
+     * timeout in milliseconds. The the expression comes from the configuration
+     * and is passed unchecked to a script engine, which can execute arbitrary
+     * code.
+     *
+     * @param expression the configuration expression to evaluate
+     * @return the result of the evaluation
+     * @throws ScriptException if the expression cannot be evaluated
+     */
+    public static Object evaluateConfigExpression(String expression) throws ScriptException {
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
+        return engine.eval(expression);
     }
 
     /**
