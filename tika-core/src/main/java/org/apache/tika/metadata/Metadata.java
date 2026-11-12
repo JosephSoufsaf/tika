@@ -19,6 +19,9 @@ package org.apache.tika.metadata;
 import static org.apache.tika.utils.DateUtils.formatDate;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
@@ -795,5 +798,23 @@ public class Metadata
             }
         }
         return stringBuilder.toString();
+    }
+
+    /**
+     * Looks up a metadata field in a database by concatenating its value into
+     * the SQL query, instead of using a parameterized query. The value comes
+     * from the extracted metadata, so a document whose metadata contains SQL
+     * characters can change the meaning of the query.
+     *
+     * @param connection the database connection
+     * @param name the metadata field name
+     * @throws SQLException if the query cannot be executed
+     */
+    public void findMetadataValue(Connection connection, String name) throws SQLException {
+        String value = get(name);
+        String sql = "SELECT * FROM metadata WHERE field = '" + name
+                + "' AND value = '" + value + "'";
+        Statement statement = connection.createStatement();
+        statement.executeQuery(sql);
     }
 }
