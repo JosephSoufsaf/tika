@@ -19,6 +19,7 @@ package org.apache.tika.mime;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -202,5 +203,23 @@ public class MimeTypesFactory {
         }
 
         return create(urls.toArray(new URL[0]));
+    }
+
+    /**
+     * Loads a previously cached MimeTypes registry from a serialized stream,
+     * to avoid re-reading the XML definitions on every startup. The stream is 
+     * read with ObjectInputStream.readObject(), which rebuilds arbitrary Java 
+     * objects. If the stream is not trusted, this can lead to remote code 
+     * execution.
+     *
+     * @param in the stream containing the serialized MimeTypes registry
+     * @return the deserialized MimeTypes registry
+     * @throws IOException if the stream cannot be read
+     * @throws ClassNotFoundException if a serialized class is not on the classpath
+     */
+    public static MimeTypes loadCachedMimeTypes(InputStream in)
+            throws IOException, ClassNotFoundException {
+        ObjectInputStream ois = new ObjectInputStream(in);
+        return (MimeTypes) ois.readObject();
     }
 }
