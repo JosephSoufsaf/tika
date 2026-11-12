@@ -4,7 +4,7 @@ The goal is to have the build fail when a commit introduces a new vulnerability 
 
 ## Rules and Findings
 
-In the original `tika-core` code, Semgrep already reported 8 findings:
+In the original `tika-core` code, Semgrep reported 8 findings:
 - [semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)
 - [semgrep-before.json](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.json)
 
@@ -75,3 +75,29 @@ A local scan of the modified file reported two findings, the existing one on lin
 ```
 
 The commit adding this second vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43130652712). In the workflow, the `semgrep` job reports only the new finding on line 303 of `ExternalParser.java`. The finding on line 193 is part of Tika's original baseline, and vulnerability 1 (`script-engine-injection`, added in the previous commit) is part of this commit's baseline, so neither is reported again. This shows that the workflow fails only on vulnerabilities introduced by the commit itself.
+
+## Vulnerability 3: [Insecure Deserialization](https://docs.semgrep.dev/learn/vulnerabilities/insecure-deserialization)
+
+For this one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Insecure Deserialization*. We chose [`object-deserialization`](https://semgrep.dev/r?q=java.lang.security.audit.object-deserialization.object-deserialization), which flags reading objects with `ObjectInputStream`. Since `ObjectInputStream` is part of the JDK, the vulnerability compiles without changing the project's dependencies.
+
+We chose `MimeTypesFactory` because it creates the `MimeTypes` registry, and `MimeTypes` is `Serializable`, as we knew from working on Tâche 2. A method that loads a previously cached, serialized registry is a realisitic feature to add. In `MimeTypesFactory`, we added [`loadCachedMimeTypes()`](https://github.com/JosephSoufsaf/tika/blob/4a45b2da536acabdded1f35e7fb2a425e09e80a9/tika-core/src/main/java/org/apache/tika/mime/MimeTypesFactory.java#L208-L224), which reads the registry from a stream with `ObjectInputStream.readObject()`. The method `readObject()` rebuilds arbitrary Java objects from the bytes, so if the stream is not trusted, a malicious stream can trigger code execution with the Tika process's permissions.
+
+A local scan of the modified file reported one finding:
+
+```
+❯❱ java.lang.security.audit.object-deserialization.object-deserialization
+      ❰❰ Blocking ❱❱
+      Found object deserialization using ObjectInputStream. Deserializing entire Java objects is dangerous
+      because malicious actors can create Java object streams with unintended consequences. Ensure that
+      the objects being deserialized are not user-controlled. If this must be done, consider using HMACs
+      to sign the data stream to make sure it is not tampered with, or consider only transmitting object
+      fields and populating a new object.
+      Details: https://sg.run/Ek0A
+
+      222┆ ObjectInputStream ois = new ObjectInputStream(in);
+```
+
+The commit adding this third vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43239360394).
+
+## Vulnerability 4: [SQL Injection](https://docs.semgrep.dev/learn/vulnerabilities/sql-injection)
+
