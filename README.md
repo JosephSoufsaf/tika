@@ -8,7 +8,7 @@ In the original `tika-core` code, Semgrep already reported 8 findings:
 - [semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)
 - [semgrep-before.json](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.json)
 
-These files were obtained by running `semgrep scan --config r/java.lang.security tika-core --[text/json] --output semgrep-avant.[txt/json]` in Powershell locally as documented Semgrep's CLI [reference page](https://semgrep.dev/docs/cli-reference). To choose the rules, we filtered Semgrep's rule registry ([semgrep.dev/r](https://semgrep.dev/r)) for `java.lang.security`. Here, `java` is the language, `lang` designates rules for the standard language and its library, and `security` is the security category. The search returned 115 rules. Of these, 29 are Pro rules, which can only be run with a Semgrep account, and 4 are not associated to Java code. The workflow therefore runs the remaining 82 rules applicable to Java.
+These files were obtained by running `semgrep scan --config r/java.lang.security tika-core --[text/json] --output semgrep-before.[txt/json]` in Powershell locally as documented in Semgrep's CLI [reference page](https://semgrep.dev/docs/cli-reference). To choose the rules, we filtered Semgrep's rule registry ([semgrep.dev/r](https://semgrep.dev/r)) for `java.lang.security`. Here, `java` is the language, `lang` designates rules for the standard language and its library, and `security` is the security category. The search returned 115 rules. Of these, 29 are Pro rules, which can only be run with a Semgrep account, and 4 are not associated with Java code. The workflow therefore runs the remaining 82 rules applicable to Java.
 
 Only new findings, not including the 8 above, should be checked for regression. To do so, we modified the case study's CI workflow that builds and tests `tika-core` (`tache2-tests.yml`, added in Tâche 2) and renamed it [`cas-etude-workflow.yml`](.github/workflows/cas-etude-workflow.yml). As before for Tâche 2, Tika's original workflows are disabled.
 
@@ -22,6 +22,56 @@ With the `--baseline-commit` option in the [Semgrep CLI Reference](https://semgr
 
 On a push, the baseline is the branch's last commit before the push, so the failure points to the exact commit that introduced the vulnerability. On a pull request, it's the PR's base commit, so all of the PR's commits are checked, not just the last one. On a manual run or the first push of a new branch, GitHub provides no previous commit, so the script uses the point where the branch left `main`.
 
+## Validation
+
+In the original [test run](https://github.com/JosephSoufsaf/tika/actions/runs/42403174876), there were no code changes and only the README was changed. In this run, `semgrep` passed. The other failed runs will be linked in the individual vulnerability sections below.
+
 # Documentation of Vulnerabilities
 
+We started from Semgrep's [vulnerability overview page](https://docs.semgrep.dev/learn/vulnerabilities/overview) and filtered Semgrep's [rule registry](https://semgrep.dev/r) accordingly.
 
+## Vulnerability 1: [Code Injection](https://docs.semgrep.dev/learn/vulnerabilities/code-injection)
+
+For this one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Injection*. We chose [`script-engine-injection`](https://semgrep.dev/r?q=java.lang.security.audit.script-engine-injection.script-engine-injection), since `javax.script` is part of the JDK: the vulnerability compiles without changing the project's dependencies.
+
+We chose `ConfigDeserializer` because it turns Tika's JSON configuration into settings objects. The configurations are external and therefore a possible entry point for data that can be controlled externally. In `ConfigDeserializer`, we added [`evaluateConfigExpression()`](https://github.com/JosephSoufsaf/tika/blob/fe749a25139bbc1cd32e50fceb73e2252aa7b796/tika-core/src/main/java/org/apache/tika/config/ConfigDeserializer.java#L123-L136) which passes the configuration value to the `eval()` method of `ScriptEngine`, which in turn runs it as a program. Whoever controls the configuration can therefore execute arbitrary code with the Tika process's permissions. 
+
+A local scan of the modified file reported one finding:
+
+```
+❯❱ java.lang.security.audit.script-engine-injection.script-engine-injection
+      ❰❰ Blocking ❱❱
+      Detected potential code injection using ScriptEngine. Ensure user-controlled data cannot enter
+      '.eval()', otherwise, this is a code injection vulnerability.
+      Details: https://sg.run/gLqn
+
+      133┆ public static Object evaluateConfigExpression(String expression) throws ScriptException {
+      134┆     ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
+      135┆     return engine.eval(expression);
+      136┆ }
+```
+
+The commit adding this first vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43116938479).
+
+## Vulnerability 2: [Command Injection](https://docs.semgrep.dev/learn/vulnerabilities/command-injection)
+
+For this one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Injection*. We chose [`command-injection-process-builder`](https://semgrep.dev/r?q=java.lang.security.audit.command-injection-process-builder.command-injection-process-builder), which flags a concatenated string passed to a `ProcessBuilder`.
+
+We chose `ExternalParser` because its purpose is to run external programs (such as ffmpeg or exiftool) on documents, so running commands is a normal part of its job. The file already contains a safe `ProcessBuilder` use (line 193) that passes the command as a list of separate arguments, which the operating system runs directly without a shell, so a value cannot inject extra commands. Semgrep flags it as well, which is a false positive. On the other hand, we added [`runShellCheck()`](https://github.com/JosephSoufsaf/tika/blob/656acf92e3008eeec96af9a15b033c5d8c836289/tika-core/src/main/java/org/apache/tika/parser/external/ExternalParser.java#L293-L304), which takes the command from the configuration and adds it directly into a `sh -c` shell command. A shell interprets characters such as `;`, `|` and `&&`, so a configuration value like `ffmpeg; rm -rf /data` makes the shell run both `command -v ffmpeg` and `rm -rf /data`, with the Tika process's permissions.
+
+A local scan of the modified file reported two findings, the existing one on line 193 and the new one on line 303:
+
+```
+❯❯❱ java.lang.security.audit.command-injection-process-builder.command-injection-process-builder
+      ❰❰ Blocking ❱❱
+      A formatted or concatenated string was detected as input to a ProcessBuilder call. This is dangerous
+      if a variable is controlled by user input and could result in a command injection. Ensure your
+      variables are not controlled by users or sufficiently sanitized.
+      Details: https://sg.run/gJJe
+
+      193┆ new ProcessBuilder(thisCommandLine),
+      ⋮┆----------------------------------------
+      303┆ new ProcessBuilder("sh", "-c", "command -v " + userCommand).start();
+```
+
+The commit adding this second vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43130652712). In the workflow, the `semgrep` job reports only the new finding on line 303 of `ExternalParser.java`. The finding on line 193 is part of Tika's original baseline, and vulnerability 1 (`script-engine-injection`, added in the previous commit) is part of this commit's baseline, so neither is reported again. This shows that the workflow fails only on vulnerabilities introduced by the commit itself.
