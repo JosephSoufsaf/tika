@@ -291,6 +291,19 @@ public class ExternalParser implements Parser {
     }
 
     /**
+     * Run the command through a shell so the configuration can use a full 
+     * command line including pipes for example. The command comes from the
+     * configuration and is added directly into the shell command, so a
+     * malicious configuration value can run any shell command.
+     *
+     * @throws IOException if the process cannot be started
+     */
+    public void runShellCheck() throws IOException {
+        String userCommand = String.join(" ", config.getCheckCommandLine());
+        new ProcessBuilder("sh", "-c", "command -v " + userCommand).start();
+    }
+
+    /**
      * Returns the configuration for this parser.
      */
     public ExternalParserConfig getConfig() {
