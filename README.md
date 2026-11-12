@@ -101,3 +101,30 @@ The commit adding this third vulnerability is found in the following [run](https
 
 ## Vulnerability 4: [SQL Injection](https://docs.semgrep.dev/learn/vulnerabilities/sql-injection)
 
+For this one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Injection*. We chose [`formatted-sql-string`](https://semgrep.dev/r?q=java.lang.security.audit.formatted-sql-string.formatted-sql-string), which flags a concatenated string passed to an SQL execution method. These classes are part of the JDK (`java.sql`), so the vulnerability compiles without changing the project's dependencies.
+
+We chose `Metadata` because it holds the key/value data Tika extracts from a document, and that data comes from the document itself so it can be controlled by whoever authors the document. A method that looks up a metadata value in a database is a realistic feature to add. In `Metadata`, we added [`findMetadataValue()`](https://github.com/JosephSoufsaf/tika/blob/19d22ddff82196c908b6af3097e8019f8f52aa65/tika-core/src/main/java/org/apache/tika/metadata/Metadata.java#L803-L819), which builds an SQL query by concatenating the metadata value into the query string instead of using a parameterized query. A document whose metadata contains SQL characters can change the meaning of the query and read or destroy data in the database.
+
+A local scan of the modified file reported two findings on the same line, from two related SQL injection rules:
+
+```
+❯❯❱ java.lang.security.audit.formatted-sql-string.formatted-sql-string
+      ❰❰ Blocking ❱❱
+      Detected a formatted string in a SQL statement. This could lead to SQL injection if variables in the
+      SQL statement are not properly sanitized. Use a prepared statements (java.sql.PreparedStatement)
+      instead. You can obtain a PreparedStatement using 'connection.prepareStatement'.
+      Details: https://sg.run/OPXp
+
+      818┆ statement.executeQuery(sql);
+
+❯❱ java.lang.security.audit.sqli.jdbc-sqli.jdbc-sqli
+      ❰❰ Blocking ❱❱
+      Detected a formatted string in a SQL statement. This could lead to SQL injection if variables in the
+      SQL statement are not properly sanitized. Use a prepared statements (java.sql.PreparedStatement)
+      instead. You can obtain a PreparedStatement using 'connection.prepareStatement'.
+      Details: https://sg.run/AvkL
+
+      818┆ statement.executeQuery(sql);
+```
+
+Both findings describe the same vulnerability (the concatenated SQL string on line 818); `formatted-sql-string` and `jdbc-sqli` are two rules that detect the same pattern. The commit adding this fourth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43247760533).
