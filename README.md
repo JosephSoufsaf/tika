@@ -149,3 +149,36 @@ A local scan of the modified file reported one finding:
 ```
 
 The commit adding this fifth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43466654662).
+
+## Vulnerability 6: Disabled Hostname Verification (TLS)
+
+For this one we looked into [`insecure-hostname-verifier`](https://semgrep.dev/r?q=insecure-hostname-verifier). It flags a `HostnameVerifier` whose `verify()` method accepts any host. `HostnameVerifier` is part of the JDK (`javax.net.ssl`), so the vulnerability compiles without changing the project's dependencies. This vulnerability is also interesting to us because we studied TLS and certificate verification in our IFT3275 (Sécurité Informatique) and IFT3325 (Téléinformatique) classes.
+
+We chose `NetworkParser` because it fetches documents from remote servers (it is already the source of the baseline `unencrypted-socket` finding), so TLS connections are a normal part of its job. Skipping the hostname check is a realistic "shortcut" a developer might take to make a certificate error go away. In `NetworkParser`, we added [`AllHostsVerifier`](https://github.com/JosephSoufsaf/tika/blob/f797d07a0e5be58fcbd88390ab251c978f2d9755/tika-core/src/main/java/org/apache/tika/parser/NetworkParser.java#L172-L183), a `HostnameVerifier` whose `verify()` always returns `true`. A TLS certificate is supposed to prove that the server contacted really is the one that was requested. Verifying the hostname is part of that proof. Because this verifier accepts any host, that check is disabled, which lets a man-in-the-middle attacker present their own certificate and impersonate the server.
+
+A local scan of the modified file reported the new finding (line 179) alongside the pre-existing `unencrypted-socket` finding (line 70):
+
+```
+❯❱ java.lang.security.audit.crypto.unencrypted-socket.unencrypted-socket
+      ❰❰ Blocking ❱❱
+      Detected use of a Java socket that is not encrypted. As a result, the traffic could be read by an
+      attacker intercepting the network traffic. Use an SSLSocket created by 'SSLSocketFactory' or
+      'SSLServerSocketFactory' instead.
+      Details: https://sg.run/W8zA
+
+      70┆ try (Socket socket = new Socket(uri.getHost(), uri.getPort())) {
+
+❯❱ java.lang.security.audit.crypto.ssl.insecure-hostname-verifier.insecure-hostname-verifier
+      ❰❰ Blocking ❱❱
+      Insecure HostnameVerifier implementation detected. This will accept any SSL certificate with any
+      hostname, which creates the possibility for man-in-the-middle attacks.
+      Details: https://sg.run/5QoD
+
+      179┆ public static class AllHostsVerifier implements HostnameVerifier {
+      180┆     public boolean verify(String hostname, SSLSession session) {
+      181┆         return true;
+      182┆     }
+      183┆ }
+```
+
+In the workflow, only the `insecure-hostname-verifier` finding on line 179 is reported as new; the `unencrypted-socket` finding is part of Tika's original baseline and is ignored. The commit adding this sixth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43476113532).
