@@ -26,6 +26,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Collections;
 import java.util.Set;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSession;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.CloseShieldInputStream;
@@ -167,4 +169,16 @@ public class NetworkParser implements Parser {
 
     }
 
+    /**
+     * Hostname verifier that accepts any host so that documents can be fetched
+     * from servers whose certificate does not match their host name.
+     * Because verify() always returns true, the certificate is no longer 
+     * checked against the server actually contacted, which allows a 
+     * man-in-the-middle attacker to come in between.
+     */
+    public static class AllHostsVerifier implements HostnameVerifier {
+        public boolean verify(String hostname, SSLSession session) {
+            return true;
+        }
+    }
 }
