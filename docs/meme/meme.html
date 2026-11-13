@@ -4,50 +4,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>mémé</title>
-    <style>
-      html, body {
-        margin: 0;
-        height: 100%;
-        overflow: hidden;
-        background: #3b1a7a;
-      }
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #3b1a7a;
+    }
 
-      .hidden { display: none; }
+    .hidden { display: none !important; }
 
-      #enter {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        font-size: 2rem;
-        cursor: pointer;
-      }
+    #enter {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      border: 0;
+      padding: 0;
+      background: #3b9be0;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
 
-      #meme { position: fixed; inset: 0; }
+    #enter img {
+      width: min(70vw, 500px);
+      height: auto;
+      transition: transform 0.2s;
+    }
 
-      #image {
-        display: block;
-        width: 100%;
-        height: 100dvh;
-        object-fit: cover;
-        object-position: 30% 20%;
-      }
-    </style>
+    #enter:hover img { transform: scale(1.05); }
+
+    #meme { position: fixed; inset: 0; }
+
+    #image {
+      display: block;
+      width: 100%;
+      height: 100dvh;
+      object-fit: cover;
+      object-position: center;
+    }
+  </style>
 </head>
 <body>
-  <button id="enter">Votre build a échoué. Cliquez pour obtenir de la motivation.</button>
+
+  <button id="enter" aria-label="Voir le résultat">
+    <img src="bear.png" alt="Ours de Graduation avec lunettes">
+  </button>
 
   <div id="meme" class="hidden">
-    <img src="meme.jpg" alt="pepe the frog as graduation album cover">
+    <picture>
+      <source media="(min-aspect-ratio: 21/10)"
+              srcset="ultrawide_3440x1440.png">
+
+      <source media="(min-aspect-ratio: 17/10)"
+              srcset="desktop_1920x1080.png 1920w,
+                      desktop_2560x1440.png 2560w"
+              sizes="100vw">
+
+      <source media="(min-aspect-ratio: 5/4)"
+              srcset="macbook_2560x1600.png">
+
+      <source media="(min-aspect-ratio: 6/10)"
+              srcset="ipad_2048x2732.png">
+
+      <source media="(min-aspect-ratio: 4/10)"
+              srcset="android_1080x2400.png 1080w,
+                      iphone_1179x2556.png 1179w"
+              sizes="100vw">
+
+      <img id="image" src="meme.jpg"
+           alt="Pepe the frog en pochette de Graduation">
+    </picture>
   </div>
 
   <audio id="son" src="meme.mp3" preload="auto" loop></audio>
 
   <script>
     const son = document.getElementById("son");
-    document.getElementById("enter").addEventListener("click", () => {
-      son.play();                       // doit être appelé directement dans le clic
-      document.getElementById("enter").classList.add("hidden");
-      document.getElementById("meme").classList.remove("hidden");
+    const enter = document.getElementById("enter");
+    const meme = document.getElementById("meme");
+
+    enter.addEventListener("click", () => {
+      son.play().catch(err => console.error("audio:", err));
+      enter.classList.add("hidden");
+      meme.classList.remove("hidden");
     });
   </script>
 </body>
