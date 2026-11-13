@@ -1,0 +1,34 @@
+name: meme
+description: Affiche un sad Pepe et le lien du meme quand un test echoue
+inputs:
+  page-url:
+    description: URL de la page GitHub Pages
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Sad Pepe et lien
+      shell: bash
+      env:
+        PAGE_URL: ${{ inputs.page-url }}
+      run: |
+        ART="${{ github.action_path }}/pepe.txt"
+
+        # logs du job
+        tr -d '\r' < "$ART"
+        echo ""
+        echo "Un test a échoué. Cliquez ici: $PAGE_URL"
+
+        # bandeau d'erreur en haut du run
+        echo "::error title=Test échoué::Cliquez ici: $PAGE_URL"
+
+        # résumé du run (l'art dans un bloc de code pour garder l'alignement)
+        {
+          echo "## Un test a échoué…"
+          echo ""
+          echo '```'
+          tr -d '\r' < "$ART"
+          echo '```'
+          echo ""
+          echo "[Cliquez ici pour la suite]($PAGE_URL)"
+        } >> "$GITHUB_STEP_SUMMARY"

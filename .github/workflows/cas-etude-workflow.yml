@@ -49,3 +49,14 @@ jobs:
 
       - name: run the new tests (ChatUniTest + manual)
         run: mvn -B -pl tika-core test -Dtest="MimeType_*_Test" -Dsurefire.failIfNoSpecifiedTests=false
+  meme:
+    name: meme d'échec
+    needs: [test]
+    if: always() && (needs.semgrep.result == 'failure' || needs.test.result == 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4     # obligatoire: sans lui, l'action locale est introuvable
+      - uses: ./.github/actions/meme
+        with:
+          page-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/meme/meme.html
+
