@@ -128,3 +128,24 @@ A local scan of the modified file reported two findings on the same line, from t
 ```
 
 Both findings describe the same vulnerability (the concatenated SQL string on line 818); `formatted-sql-string` and `jdbc-sqli` are two rules that detect the same pattern. The commit adding this fourth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43247760533).
+
+## Vulnerability 5: Weak Hash (MD5)
+
+For this one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Cryptographic Failures (A02:2021)*. We chose [`use-of-md5`](https://semgrep.dev/r?q=java.lang.security.audit.crypto.use-of-md5.use-of-md5), which flags a call to `MessageDigest.getInstance("MD5")`. Among the MD5 rules, `use-of-md5` targets the JDK class `java.security.MessageDigest`, therefore it fits without any new dependency. This vulnerability is also interesting to us because we studied MD5 and its weaknesses (collision attacks) in our IFT3275 (Sécurité Informatique) class.
+
+We chose `InputStreamDigester` because its purpose is to compute a cryptographic digest over a document's content. Choosing a hash algorithm there is a normal part of its job, so selecting MD5 is a realistic mistake. In `InputStreamDigester`, we added [`md5Digest()`](https://github.com/JosephSoufsaf/tika/blob/35bdea7431c946bac9c315942ba658a2bcd805b6/tika-core/src/main/java/org/apache/tika/digest/InputStreamDigester.java#L121-L135), which computes the digest with `MessageDigest.getInstance("MD5")`. Given that MD5 is no longer collision resistant, an attacker can produce two different documents with the same MD5 digest. Thus, a digest used to verify a document’s integrity or to check whether two documents are identical can be bypassed.
+
+A local scan of the modified file reported one finding:
+
+```
+❯❱ java.lang.security.audit.crypto.use-of-md5.use-of-md5
+      ❰❰ Blocking ❱❱
+      Detected MD5 hash algorithm which is considered insecure. MD5 is not collision resistant and is
+      therefore not suitable as a cryptographic signature. Use HMAC instead.
+      Details: https://sg.run/ryJn
+
+      ▶▶┆ Autofix ▶ "SHA-512"
+      132┆ MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+```
+
+The commit adding this fifth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43466654662).
