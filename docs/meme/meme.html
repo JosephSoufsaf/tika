@@ -43,6 +43,20 @@
       object-fit: cover;
       object-position: center;
     }
+
+    #legende {
+      position: absolute;
+      left: 1rem;
+      bottom: 1rem;
+      margin: 0;
+      max-width: 80vw;
+      color: #fff;
+      font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive;
+      font-size: clamp(1.2rem, 3vw, 2.4rem);
+      line-height: 1.3;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+      pointer-events: none;   /* le texte ne bloque pas les clics */
+    }
   </style>
 </head>
 <body>
@@ -75,6 +89,11 @@
       <img id="image" src="meme.jpg"
            alt="Pepe the frog en pochette de Graduation">
     </picture>
+    <p id="legende">
+      What doesn’t merge makes you stronger.<br>
+      Red build, red flag, fix it, push it, ship it harder.<br>
+        - DJ SOUF && DJ THAN ft. Kanye west
+    </p>
   </div>
 
   <audio id="son" src="meme.mp3" preload="auto" loop></audio>
