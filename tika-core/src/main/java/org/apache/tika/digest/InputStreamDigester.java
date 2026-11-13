@@ -116,6 +116,21 @@ public class InputStreamDigester implements Digester {
         metadata.set(metadataProperty, encoder.encode(messageDigest.digest()));
 
         tis.rewind();
+                
     }
-
+    /**
+     * Computes an MD5 digest of the given data, used as a quick way to check
+     * whether two documents have identical content. MD5 is no longer collision 
+     * resistant, so two different documents can be made to produce the same 
+     * digest.
+     *
+     * @param data the bytes to digest
+     * @return the MD5 digest of the data
+     * @throws NoSuchAlgorithmException if the MD5 algorithm is unavailable
+     */
+    public byte[] md5Digest(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+        md5Digest.update(data);
+        return md5Digest.digest();
+    }
 }
