@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>...</title>
+  <style>
+    /* à vous: fond noir, image centrée avec object-fit: contain,
+       bouton centré, .hidden { display: none } */
+  </style>
+</head>
+<body>
+  <button id="enter">…</button>
+
+  <div id="meme" class="hidden">
+    <img src="meme.jpg" alt="pepe the frog as graduation album cover">
+  </div>
+
+  <audio id="son" src="meme.mp3" preload="auto" loop></audio>
+
+  <script>
+    const son = document.getElementById("son");
+    document.getElementById("enter").addEventListener("click", () => {
+      son.play();                       // doit être appelé directement dans le clic
+      document.getElementById("enter").classList.add("hidden");
+      document.getElementById("meme").classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
