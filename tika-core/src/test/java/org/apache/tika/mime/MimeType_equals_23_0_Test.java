@@ -40,7 +40,7 @@ public class MimeType_equals_23_0_Test {
     public void testEqualsObject() {
         MimeType sameMimeType = new MimeType(mediaType);
         MimeType differentMimeType = new MimeType(new MediaType("text", "plain", Collections.emptyMap()));
-        assertTrue(mimeType.equals(sameMimeType));
+        assertFalse(mimeType.equals(sameMimeType));   // volontairement faux pour valider le job meme
         assertFalse(mimeType.equals(differentMimeType));
         assertFalse(mimeType.equals(null));
         assertFalse(mimeType.equals(new Object()));
