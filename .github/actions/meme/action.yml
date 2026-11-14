@@ -17,7 +17,7 @@ runs:
         # logs du job
         tr -d '\r' < "$ART"
         echo ""
-        echo "Un test a échoué. Cliquez ici: $PAGE_URL"
+        echo "Un ou plusieurs tests a échoué. De la motitivation pour combattre votre tristesse: $PAGE_URL"
 
         # bandeau d'erreur en haut du run
         echo "::error title=Test échoué::Cliquez ici: $PAGE_URL"
