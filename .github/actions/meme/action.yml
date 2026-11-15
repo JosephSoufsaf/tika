@@ -26,6 +26,7 @@ runs:
         {
           echo "## Un ou plusieurs tests ont échoué…"
           echo ""
+          echo "### Pepe est triste maintenant"
           echo '```'
           tr -d '\r' < "$ART"
           echo '```'
