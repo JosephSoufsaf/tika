@@ -255,8 +255,8 @@ C'est notre variante du rickroll demandé par l'énoncé.
 
 ### Source : Élément d'humour (site web)
 1. Image de Pepe the frog: https://www.amazon.ca/Based-Ascension-Notebook-pepe-notebook/dp/B0FXX719VR
-2. Image de l'ours: Artwork by Takashi Murakami for Kanye West’s Graduation. Image via Gigwise. (www.gigwise.com/photos/63527/9/Daft-Punk-Radiohead-KISS-The-Best-Band-Logos-Ever/)
-3. Chanson qui joue dans le background: “Stronger” by Kanye West, from Graduation (2007). Written by Kanye West, Mike Dean, Thomas Bangalter, Guy-Manuel de Homem-Christo, and Edwin Birdsong.
-
+2. Image de l'ours: Art fait par Takashi Murakami pour Kanye West’s Graduation. Image via Gigwise. (www.gigwise.com/photos/63527/9/Daft-Punk-Radiohead-KISS-The-Best-Band-Logos-Ever/)
+3. Chanson qui joue dans le background: “Stronger” by Kanye West, from Graduation (2007). Écrit par Kanye West, Mike Dean, Thomas Bangalter, Guy-Manuel de Homem-Christo, et Edwin Birdsong.
+4. Ascii art de Pepe the frog: https://emojicombos.com/pepe-ascii-art
 
 
