@@ -182,3 +182,45 @@ A local scan of the modified file reported the new finding (line 179) alongside 
 ```
 
 In the workflow, only the `insecure-hostname-verifier` finding on line 179 is reported as new; the `unencrypted-socket` finding is part of Tika's original baseline and is ignored. The commit adding this sixth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43476113532).
+
+## Vulnerability 7: Overly Permissive File Permissions
+
+For this one we searched the [rule registry](https://semgrep.dev/r) for [`overly-permissive-file-permission`](https://semgrep.dev/r?q=overly-permissive-file-permission). It flags giving read, write, and execute permission to all users (`rwxrwxrwx`). This vulnerability is also interesting to us because Unix file permissions and the principle of least privilege were covered in our IFT2245 (Systèmes d'exploitation) class.
+
+We chose `TemporaryResources` because its job is to create the temporary files Tika uses while parsing, and those files hold the content of the document being processed. Setting permissions on a temporary file there is a normal part of its job. In `TemporaryResources`, we added [`createSharedTempFile()`](https://github.com/JosephSoufsaf/tika/blob/818ac3695d70f5d8e4215d6a8ae5cc4819b1f6f2/tika-core/src/main/java/org/apache/tika/io/TemporaryResources.java#L209-L223), which creates a temporary file and then sets its permissions to `rwxrwxrwx`. The last three characters grant every other user on the machine read, write, and execute access, so any user can read the document content stored in the file or modify it while Tika is processing it. This breaks the principle of least privilege: a temporary file should only be accessible to the account that created it.
+
+A local scan of the modified file reported one finding:
+
+```
+❯❱ java.lang.security.audit.overly-permissive-file-permission.overly-permissive-file-permission
+      ❰❰ Blocking ❱❱
+      Detected file permissions that are overly permissive (read, write, and execute). It is generally a
+      bad practices to set overly permissive file permission such as read+write+exec for all users. If the
+      file affected is a configuration, a binary, a script or sensitive data, it can lead to privilege
+      escalation or information leakage. Instead, follow the principle of least privilege and give users
+      only the  permissions they need.
+      Details: https://sg.run/LwzJ
+
+      222┆ Files.setPosixFilePermissions(path,
+      223┆     PosixFilePermissions.fromString("rwxrwxrwx"));
+```
+
+The commit adding this seventh vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43719281541).
+
+# Before vs. After
+
+Before the additions, Semgrep reported 8 findings on `tika-core` ([semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)). After introducing the 7 vulnerabilities, it reports 16 findings ([semgrep-after.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-after/semgrep-after.txt)): the same 8 findings, plus 8 new ones.
+
+The 8 new findings correspond to the 7 vulnerabilities; vulnerability 4 (SQL Injection) is reported by two rules on the same line (`formatted-sql-string` and `jdbc-sqli`), so it accounts for 2 of the 8.
+
+| # | Vulnerability | New rule | File |
+|---|---|---|---|
+| 1 | Code Injection | `script-engine-injection` | `config/ConfigDeserializer.java` |
+| 2 | Command Injection | `command-injection-process-builder` | `parser/external/ExternalParser.java` |
+| 3 | Insecure Deserialization | `object-deserialization` | `mime/MimeTypesFactory.java` |
+| 4 | SQL Injection | `formatted-sql-string` + `jdbc-sqli` | `metadata/Metadata.java` |
+| 5 | Weak Hash (MD5) | `use-of-md5` | `digest/InputStreamDigester.java` |
+| 6 | Disabled Hostname Verification | `insecure-hostname-verifier` | `parser/NetworkParser.java` |
+| 7 | Overly Permissive File Permissions | `overly-permissive-file-permission` | `io/TemporaryResources.java` |
+
+The 8 original findings are never reported as new in any of the commit scans because they exist in both the baseline and the current code. Each vulnerability was added in its own commit, so on each push the workflow reported exactly the findings that commit introduced. A pull request into `main` would instead report all 8 new findings at once, since none of them exist on `main`.
