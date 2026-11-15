@@ -216,7 +216,7 @@ The 8 new findings correspond to the 7 vulnerabilities; vulnerability 4 (SQL Inj
 | # | Vulnerability | New rule | File |
 |---|---|---|---|
 | 1 | Code Injection | `script-engine-injection` | `config/ConfigDeserializer.java` |
-| 2 | Command Injection | `command-injection-process-builder` | `parser/external/ExternalParser.java` (line 303) |
+| 2 | Command Injection | `command-injection-process-builder` | `parser/external/ExternalParser.java` |
 | 3 | Insecure Deserialization | `object-deserialization` | `mime/MimeTypesFactory.java` |
 | 4 | SQL Injection | `formatted-sql-string` + `jdbc-sqli` | `metadata/Metadata.java` |
 | 5 | Weak Hash (MD5) | `use-of-md5` | `digest/InputStreamDigester.java` |
