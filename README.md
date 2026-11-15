@@ -253,10 +253,10 @@ C'est notre variante du rickroll demandé par l'énoncé.
 3. Sur la page, **cliquez sur l'ours**, puis le meme s'affiche et le son démarre. Montez le volume.
 4. Sur un run vert, meme d'échec est *skipped*: il n'y a rien à voir.
 
-### Source : Élément d'humour 
+### Source : Élément d'humour (site web)
 1. Image de Pepe the frog: https://www.amazon.ca/Based-Ascension-Notebook-pepe-notebook/dp/B0FXX719VR
 2. Image de l'ours: Artwork by Takashi Murakami for Kanye West’s Graduation. Image via Gigwise. (www.gigwise.com/photos/63527/9/Daft-Punk-Radiohead-KISS-The-Best-Band-Logos-Ever/)
-3. Chanson qui joue dans le background 
+3. Chanson qui joue dans le background: “Stronger” by Kanye West, from Graduation (2007). Written by Kanye West, Mike Dean, Thomas Bangalter, Guy-Manuel de Homem-Christo, and Edwin Birdsong.
 
 
 
