@@ -182,3 +182,27 @@ A local scan of the modified file reported the new finding (line 179) alongside 
 ```
 
 In the workflow, only the `insecure-hostname-verifier` finding on line 179 is reported as new; the `unencrypted-socket` finding is part of Tika's original baseline and is ignored. The commit adding this sixth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43476113532).
+
+## Vulnerability 7: Overly Permissive File Permissions
+
+For this one we searched the [rule registry](https://semgrep.dev/r) for [`overly-permissive-file-permission`](https://semgrep.dev/r?q=overly-permissive-file-permission). It flags giving read, write, and execute permission to all users (`rwxrwxrwx`). This vulnerability is also interesting to us because Unix file permissions and the principle of least privilege were covered in our IFT2245 (Systèmes d'exploitation) class.
+
+We chose `TemporaryResources` because its job is to create the temporary files Tika uses while parsing, and those files hold the content of the document being processed. Setting permissions on a temporary file there is a normal part of its job. In `TemporaryResources`, we added [`createSharedTempFile()`](https://github.com/JosephSoufsaf/tika/blob/818ac3695d70f5d8e4215d6a8ae5cc4819b1f6f2/tika-core/src/main/java/org/apache/tika/io/TemporaryResources.java#L209-L223), which creates a temporary file and then sets its permissions to `rwxrwxrwx`. The last three characters grant every other user on the machine read, write, and execute access, so any user can read the document content stored in the file or modify it while Tika is processing it. This breaks the principle of least privilege: a temporary file should only be accessible to the account that created it.
+
+A local scan of the modified file reported one finding:
+
+```
+❯❱ java.lang.security.audit.overly-permissive-file-permission.overly-permissive-file-permission
+      ❰❰ Blocking ❱❱
+      Detected file permissions that are overly permissive (read, write, and execute). It is generally a
+      bad practices to set overly permissive file permission such as read+write+exec for all users. If the
+      file affected is a configuration, a binary, a script or sensitive data, it can lead to privilege
+      escalation or information leakage. Instead, follow the principle of least privilege and give users
+      only the  permissions they need.
+      Details: https://sg.run/LwzJ
+
+      222┆ Files.setPosixFilePermissions(path,
+      223┆     PosixFilePermissions.fromString("rwxrwxrwx"));
+```
+
+The commit adding this seventh vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43719281541).
