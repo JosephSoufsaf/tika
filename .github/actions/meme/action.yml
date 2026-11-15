@@ -33,5 +33,4 @@ runs:
           echo ""
           echo "[Cliquez ici pour la suite]($PAGE_URL)"
           echo ""
-          echo "Montez le son de votre appareil pour la meilleure expérience."
         } >> "$GITHUB_STEP_SUMMARY"
