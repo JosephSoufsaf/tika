@@ -17,18 +17,20 @@ runs:
         # logs du job
         tr -d '\r' < "$ART"
         echo ""
-        echo "Un ou plusieurs tests a échoué. Pepe the frog est très triste maintenant. De la motitivation pour combattre votre tristesse et celle de Pepe the frog(Veuillez lever le son de votre appareil pour la meilleur expérience): $PAGE_URL"
+        echo "Un ou plusieurs tests ont échoué. Pepe the frog est très triste maintenant. De la motivation pour combattre votre tristesse et celle de Pepe the frog (veuillez monter le son de votre appareil pour la meilleure expérience): $PAGE_URL"
 
         # bandeau d'erreur en haut du run
         echo "::error title=Test échoué::Cliquez ici: $PAGE_URL"
 
         # résumé du run (l'art dans un bloc de code pour garder l'alignement)
         {
-          echo "## Un test a échoué…"
+          echo "## Un ou plusieurs tests ont échoué…"
           echo ""
           echo '```'
           tr -d '\r' < "$ART"
           echo '```'
           echo ""
           echo "[Cliquez ici pour la suite]($PAGE_URL)"
+          echo ""
+          echo "Montez le son de votre appareil pour la meilleure expérience."
         } >> "$GITHUB_STEP_SUMMARY"
