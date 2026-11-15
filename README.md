@@ -206,3 +206,21 @@ A local scan of the modified file reported one finding:
 ```
 
 The commit adding this seventh vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43719281541).
+
+# Before vs. After
+
+Before the additions, Semgrep reported 8 findings on `tika-core` ([semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)). After introducing the 7 vulnerabilities, it reports 16 findings ([semgrep-after.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-after/semgrep-after.txt)): the same 8 findings, plus 8 new ones.
+
+The 8 new findings correspond to the 7 vulnerabilities; vulnerability 4 (SQL Injection) is reported by two rules on the same line (`formatted-sql-string` and `jdbc-sqli`), so it accounts for 2 of the 8.
+
+| # | Vulnerability | New rule | File |
+|---|---|---|---|
+| 1 | Code Injection | `script-engine-injection` | `config/ConfigDeserializer.java` |
+| 2 | Command Injection | `command-injection-process-builder` | `parser/external/ExternalParser.java` (line 303) |
+| 3 | Insecure Deserialization | `object-deserialization` | `mime/MimeTypesFactory.java` |
+| 4 | SQL Injection | `formatted-sql-string` + `jdbc-sqli` | `metadata/Metadata.java` |
+| 5 | Weak Hash (MD5) | `use-of-md5` | `digest/InputStreamDigester.java` |
+| 6 | Disabled Hostname Verification | `insecure-hostname-verifier` | `parser/NetworkParser.java` |
+| 7 | Overly Permissive File Permissions | `overly-permissive-file-permission` | `io/TemporaryResources.java` |
+
+The 8 original findings are never reported as new in any of the commit scans because they exist in both the baseline and the current code. Each vulnerability was added in its own commit, so on each push the workflow reported exactly the findings that commit introduced. A pull request into `main` would instead report all 8 new findings at once, since none of them exist on `main`.
