@@ -224,3 +224,39 @@ The 8 new findings correspond to the 7 vulnerabilities; vulnerability 4 (SQL Inj
 | 7 | Overly Permissive File Permissions | `overly-permissive-file-permission` | `io/TemporaryResources.java` |
 
 The 8 original findings are never reported as new in any of the commit scans because they exist in both the baseline and the current code. Each vulnerability was added in its own commit, so on each push the workflow reported exactly the findings that commit introduced. A pull request into `main` would instead report all 8 new findings at once, since none of them exist on `main`.
+
+
+## Humour: un meme quand un test échoue
+
+### Ce qui a été fait
+Quand un test du cas d'étude échoue, le CI affiche un **sad Pepe en ASCII art** et un lien vers une
+**page web** où un meme (Pepe sur la pochette de *Graduation*) s'affiche avec une parodie audio.
+C'est notre variante du rickroll demandé par l'énoncé.
+
+### Comment ça fonctionne
+1. Le job test de cas-etude-workflow.yml build et exécute les tests MimeType_*_Test.
+2. Le job meme d'échec dépend de test et ne s'exécute que si test échoue
+   (needs: [test] + if: always() && needs.test.result == 'failure').
+   always() est nécessaire, sinon GitHub ignorerait le job dès que test échoue.
+   Le build reste rouge: le meme n'efface pas l'erreur.
+3. Le job appelle l'**action réutilisable** .github/actions/meme/. Elle:
+   - affiche l'ASCII art (pepe.txt) et le lien dans les logs;
+   - ajoute une annotation d'erreur avec le lien en haut du run;
+   - écrit l'art et le lien cliquable dans le résumé du run.
+4. La page est dans docs/meme/ et publiée avec GitHub Pages:
+   https://josephsoufsaf.github.io/tika/meme/meme.html
+
+### Comment l'utiliser
+1. Ouvrez l'onglet **Actions** et cliquez sur un run dont le job test est rouge.
+2. Sur la page **Summary** du run, lisez le sad Pepe et cliquez sur **« Cliquez ici pour la suite »**.
+   Les logs de l'étape « Sad Pepe et lien » du job meme d'échec contiennent aussi l'art et le lien.
+3. Sur la page, **cliquez sur l'ours**, puis le meme s'affiche et le son démarre. Montez le volume.
+4. Sur un run vert, meme d'échec est *skipped*: il n'y a rien à voir.
+
+### Source : Élément d'humour 
+1. Image de Pepe the frog: https://www.amazon.ca/Based-Ascension-Notebook-pepe-notebook/dp/B0FXX719VR
+2. Image de l'ours: Artwork by Takashi Murakami for Kanye West’s Graduation. Image via Gigwise. (www.gigwise.com/photos/63527/9/Daft-Punk-Radiohead-KISS-The-Best-Band-Logos-Ever/)
+3. Chanson qui joue dans le background 
+
+
+
