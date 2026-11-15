@@ -206,4 +206,19 @@ public class TemporaryResources implements Closeable {
         }
     }
 
+    /**
+     * Creates a temporary file and makes it readable, writable, and executable
+     * by all users. This is sometimes done so that another program, which does
+     * not run under the same account, can still read the file. This means that
+     * any user on the machine can also read or modify the document.
+     *
+     * @return the path to the created temporary file
+     * @throws IOException if the file cannot be created or its permissions set
+     */
+    public Path createSharedTempFile() throws IOException {
+        Path path = createTempFile();
+        Files.setPosixFilePermissions(path, 
+            PosixFilePermissions.fromString("rwxrwxrwx"));
+        return path;
+    }
 }
