@@ -270,6 +270,6 @@ Pour essayer vous-même, vous pouvez faire échouer n'importe quel test dans la 
 
 Claude a été utilisé pour énumérer plusieurs des vulnérabilités applicables ainsi que pour résumer les différents modules de `tika-core` dans le but de trouver les meilleurs emplacements pour les vulnérabilités. Parmi celles-ci, nous avons choisi celles qui avaient le plus de sens pour nous.
 
-Il a aussi écrit le script [`.github/scripts/semgrep-scan.sh`](https://github.com/JosephSoufsaf/tika/blob/tache3/.github/scripts/semgrep-scan.sh) à partir de mes consignes précisant ce que je voulais.
+Il a aussi écrit le script [`.github/scripts/semgrep-scan.sh`](https://github.com/JosephSoufsaf/tika/blob/tache3/.github/scripts/semgrep-scan.sh) à partir de nos consignes précisant ce que l'on voulait.
 
 On l'a également utilisé dans ce projet pour traduire en français certaines sections qui avaient été initialement rédigées en anglais.
