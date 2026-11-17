@@ -265,4 +265,8 @@ Pour essayer vous-même, vous pouvez faire échouer n'importe quel test dans la 
 3. Chanson qui joue dans le background: “Stronger” by Kanye West, from Graduation (2007). Écrit par Kanye West, Mike Dean, Thomas Bangalter, Guy-Manuel de Homem-Christo, et Edwin Birdsong.
 4. Ascii art de Pepe the frog: https://emojicombos.com/pepe-ascii-art
 
+# Utilisation IA
+
+L’intelligence artificielle a été utilisée dans ce projet pour traduire en français certaines sections qui avaient été initialement rédigées en anglais.
+
 
