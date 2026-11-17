@@ -1,44 +1,44 @@
-# GitHub Actions Workflow Modification Design and Implementation Choices
+# Choix de conception et d'implémentation de la modification du workflow GitHub Actions
 
-The goal is to have the build fail when a commit introduces a new vulnerability detected by Semgrep without failing for the findings that already exist in Tika.
+L'objectif est de faire échouer le build lorsqu'un commit introduit une nouvelle vulnérabilité détectée par Semgrep, sans échouer à cause des alertes qui existent déjà dans Tika.
 
-## Rules and Findings
+## Règles et alertes
 
-In the original `tika-core` code, Semgrep reported 8 findings:
+Dans le code original de `tika-core`, Semgrep a signalé 8 alertes :
 - [semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)
 - [semgrep-before.json](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.json)
 
-These files were obtained by running `semgrep scan --config r/java.lang.security tika-core --[text/json] --output semgrep-before.[txt/json]` in Powershell locally as documented in Semgrep's CLI [reference page](https://semgrep.dev/docs/cli-reference). To choose the rules, we filtered Semgrep's rule registry ([semgrep.dev/r](https://semgrep.dev/r)) for `java.lang.security`. Here, `java` is the language, `lang` designates rules for the standard language and its library, and `security` is the security category. The search returned 115 rules. Of these, 29 are Pro rules, which can only be run with a Semgrep account, and 4 are not associated with Java code. The workflow therefore runs the remaining 82 rules applicable to Java.
+Ces fichiers ont été obtenus en exécutant `semgrep scan --config r/java.lang.security tika-core --[text/json] --output semgrep-before.[txt/json]` localement dans PowerShell, comme documenté dans la [page de référence de la CLI](https://semgrep.dev/docs/cli-reference) de Semgrep. Pour choisir les règles, nous avons filtré le registre de règles de Semgrep ([semgrep.dev/r](https://semgrep.dev/r)) sur `java.lang.security`. Ici, `java` est le langage, `lang` désigne les règles pour le langage standard et sa bibliothèque, et `security` est la catégorie de sécurité. La recherche a retourné 115 règles. Parmi celles-ci, 29 sont des règles Pro, qui ne peuvent être exécutées qu'avec un compte Semgrep, et 4 ne concernent pas du code Java. Le workflow exécute donc les 82 règles restantes applicables à Java.
 
-Only new findings, not including the 8 above, should be checked for regression. To do so, we modified the case study's CI workflow that builds and tests `tika-core` (`tache2-tests.yml`, added in Tâche 2) and renamed it [`cas-etude-workflow.yml`](.github/workflows/cas-etude-workflow.yml). As before for Tâche 2, Tika's original workflows are disabled.
+Seules les nouvelles alertes, excluant les 8 ci-dessus, doivent être vérifiées pour détecter une régression. Pour ce faire, nous avons modifié le workflow de CI du cas d'étude qui build et teste `tika-core` (`tache2-tests.yml`, ajouté à la Tâche 2) et l'avons renommé [`cas-etude-workflow.yml`](.github/workflows/cas-etude-workflow.yml). Comme pour la Tâche 2, les workflows originaux de Tika sont désactivés.
 
-The workflow runs on every push, every pull request, and manually. It has two parallel jobs: `semgrep`, which looks for new vulnerabilities, and `build and test tika-core`. If either fails, the run fails. Keeping them separate shows directly why a build failed, and lets the tests run even when a vulnerability is found.
+Le workflow s'exécute à chaque push, à chaque pull request, et manuellement. Il comporte deux jobs parallèles : `semgrep`, qui cherche les nouvelles vulnérabilités, et `build and test tika-core`. Si l'un des deux échoue, l'exécution échoue. Les garder séparés montre directement pourquoi un build a échoué, et permet aux tests de s'exécuter même lorsqu'une vulnérabilité est détectée.
 
-## `semgrep` job in workflow
+## Le job `semgrep` dans le workflow
 
-The job checks out the code with its full history (needed to access the baseline commit), installs Python and Semgrep 1.183.0 (the same version as used locally), then runs the script [`semgrep-scan.sh`](https://github.com/JosephSoufsaf/tika/blob/tache3/.github/scripts/semgrep-scan.sh).
+Le job récupère le code avec tout son historique (nécessaire pour accéder au commit de référence), installe Python et Semgrep 1.183.0 (la même version que celle utilisée localement), puis exécute le script [`semgrep-scan.sh`](https://github.com/JosephSoufsaf/tika/blob/tache3/.github/scripts/semgrep-scan.sh).
 
-With the `--baseline-commit` option in the [Semgrep CLI Reference](https://semgrep.dev/docs/cli-reference), Semgrep only analyzes the files changed since a reference commit and only reports findings absent from that commit. The existing findings are therefore ignored. The `--error` option leads to exit with code 1 if there are any new findings.
+Avec l'option `--baseline-commit` de la [référence de la CLI de Semgrep](https://semgrep.dev/docs/cli-reference), Semgrep n'analyse que les fichiers modifiés depuis un commit de référence et ne signale que les alertes absentes de ce commit. Les alertes existantes sont donc ignorées. L'option `--error` fait sortir avec le code 1 s'il y a de nouvelles alertes.
 
-On a push, the baseline is the branch's last commit before the push, so the failure points to the exact commit that introduced the vulnerability. On a pull request, it's the PR's base commit, so all of the PR's commits are checked, not just the last one. On a manual run or the first push of a new branch, GitHub provides no previous commit, so the script uses the point where the branch left `main`.
+Lors d'un push, le commit de référence est le dernier commit de la branche avant le push, de sorte que l'échec pointe vers le commit exact qui a introduit la vulnérabilité. Lors d'une pull request, il s'agit du commit de base de la PR, de sorte que tous les commits de la PR sont vérifiés, et pas seulement le dernier. Lors d'une exécution manuelle ou du premier push d'une nouvelle branche, GitHub ne fournit aucun commit précédent, donc le script utilise le point où la branche a quitté `main`.
 
 ## Validation
 
-In the original [test run](https://github.com/JosephSoufsaf/tika/actions/runs/42403174876), the only change was to the README, so `semgrep` found nothing new and passed. On the other hand, each of the 7 vulnerabilities was added in its own commit and each made the `semgrep` job fail, reporting exactly the finding that commit introduced. These runs are linked in the individual vulnerability sections below.
+Dans l'[exécution de test](https://github.com/JosephSoufsaf/tika/actions/runs/42403174876) initiale, le seul changement portait sur le README, donc `semgrep` n'a rien trouvé de nouveau et a réussi. À l'inverse, chacune des 7 vulnérabilités a été ajoutée dans son propre commit, et chacune a fait échouer le job `semgrep`, en signalant exactement l'alerte que ce commit introduisait. Ces exécutions sont liées dans les sections individuelles des vulnérabilités ci-dessous.
 
-The commit for vulnerability 2 is the clearest demonstration of the diff-aware check. `ExternalParser.java` already contained a `command-injection-process-builder` finding on line 193 (part of Tika's baseline), yet the job reported only the new finding on line 303 and ignored the pre-existing one. This confirms the build fails on vulnerabilities introduced by the commit, not on findings that already existed.
+Le commit de la vulnérabilité 2 est la démonstration la plus claire de l'analyse différentielle. `ExternalParser.java` contenait déjà une alerte `command-injection-process-builder` à la ligne 193 (faisant partie de la base de référence de Tika), pourtant le job n'a signalé que la nouvelle alerte à la ligne 303 et a ignoré celle qui préexistait. Cela confirme que le build échoue sur les vulnérabilités introduites par le commit, et non sur les alertes qui existaient déjà.
 
-# Documentation of Vulnerabilities
+# Documentation des vulnérabilités
 
-We started from Semgrep's [vulnerability overview page](https://docs.semgrep.dev/learn/vulnerabilities/overview) and filtered Semgrep's [rule registry](https://semgrep.dev/r) accordingly. We selected the first four vulnerabilities from those applicable in the overview page and then three others that seemed interesting and that were related to other courses we have taken.
+Nous sommes partis de la [page de présentation des vulnérabilités](https://docs.semgrep.dev/learn/vulnerabilities/overview) de Semgrep et avons filtré le [registre de règles](https://semgrep.dev/r) de Semgrep en conséquence. Nous avons sélectionné les quatre premières vulnérabilités parmi celles applicables de la page de présentation, puis trois autres qui nous semblaient intéressantes et qui étaient liées à d'autres cours que nous avons suivis.
 
-## Vulnerability 1: [Code Injection](https://docs.semgrep.dev/learn/vulnerabilities/code-injection)
+## Vulnérabilité 1 : [Injection de code](https://docs.semgrep.dev/learn/vulnerabilities/code-injection)
 
-For the first one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Injection*. We chose [`script-engine-injection`](https://semgrep.dev/r?q=java.lang.security.audit.script-engine-injection.script-engine-injection).
+Pour la première, nous avons filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Injection*. Nous avons choisi [`script-engine-injection`](https://semgrep.dev/r?q=java.lang.security.audit.script-engine-injection.script-engine-injection).
 
-As for the module, we chose `ConfigDeserializer` because it turns Tika's JSON configuration into settings objects. The configurations are external and therefore a possible entry point for data that can be controlled externally. In `ConfigDeserializer`, we added [`evaluateConfigExpression()`](https://github.com/JosephSoufsaf/tika/blob/fe749a25139bbc1cd32e50fceb73e2252aa7b796/tika-core/src/main/java/org/apache/tika/config/ConfigDeserializer.java#L123-L136) which passes the configuration value to the `eval()` method of `ScriptEngine`, which in turn runs it as a program. Whoever controls the configuration can therefore execute arbitrary code with the Tika process's permissions. 
+Pour ce qui est du module, nous avons choisi `ConfigDeserializer` parce qu'il transforme la configuration JSON de Tika en objets de paramètres. Les configurations sont externes et constituent donc un point d'entrée possible pour des données contrôlables de l'extérieur. Dans `ConfigDeserializer`, nous avons ajouté [`evaluateConfigExpression()`](https://github.com/JosephSoufsaf/tika/blob/fe749a25139bbc1cd32e50fceb73e2252aa7b796/tika-core/src/main/java/org/apache/tika/config/ConfigDeserializer.java#L123-L136), qui transmet la valeur de configuration à la méthode `eval()` de `ScriptEngine`, qui l'exécute alors comme un programme. Quiconque contrôle la configuration peut donc exécuter du code arbitraire avec les permissions du processus Tika.
 
-A local scan of the modified file reported one finding:
+Une analyse locale du fichier modifié a signalé une alerte :
 
 ```
 ❯❱ java.lang.security.audit.script-engine-injection.script-engine-injection
@@ -53,15 +53,15 @@ A local scan of the modified file reported one finding:
       136┆ }
 ```
 
-The commit adding this first vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43116938479).
+Le commit qui ajoute cette première vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43116938479) suivante.
 
-## Vulnerability 2: [Command Injection](https://docs.semgrep.dev/learn/vulnerabilities/command-injection)
+## Vulnérabilité 2 : [Injection de commande](https://docs.semgrep.dev/learn/vulnerabilities/command-injection)
 
-For the second one we again filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Injection*. We chose [`command-injection-process-builder`](https://semgrep.dev/r?q=java.lang.security.audit.command-injection-process-builder.command-injection-process-builder), which flags a concatenated string passed to a `ProcessBuilder`.
+Pour la deuxième, nous avons de nouveau filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Injection*. Nous avons choisi [`command-injection-process-builder`](https://semgrep.dev/r?q=java.lang.security.audit.command-injection-process-builder.command-injection-process-builder), qui signale une chaîne concaténée passée à un `ProcessBuilder`.
 
-As for the module, we chose `ExternalParser` because its purpose is to run external programs (such as ffmpeg or exiftool) on documents, so running commands is a normal part of its job. The file already contains a safe `ProcessBuilder` use (line 193) that passes the command as a list of separate arguments, which the operating system runs directly without a shell, so a value cannot inject extra commands. Semgrep flags it as well, which is a false positive. On the other hand, we added [`runShellCheck()`](https://github.com/JosephSoufsaf/tika/blob/656acf92e3008eeec96af9a15b033c5d8c836289/tika-core/src/main/java/org/apache/tika/parser/external/ExternalParser.java#L293-L304), which takes the command from the configuration and adds it directly into a `sh -c` shell command. A shell interprets characters such as `;`, `|` and `&&`, so a configuration value like `ffmpeg; rm -rf /data` makes the shell run both `command -v ffmpeg` and `rm -rf /data`, with the Tika process's permissions.
+Pour ce qui est du module, nous avons choisi `ExternalParser` parce que son rôle est d'exécuter des programmes externes (comme ffmpeg ou exiftool) sur des documents, donc exécuter des commandes fait partie de son fonctionnement normal. Le fichier contient déjà une utilisation sûre de `ProcessBuilder` (ligne 193) qui passe la commande sous forme de liste d'arguments séparés, que le système d'exploitation exécute directement sans shell, de sorte qu'une valeur ne peut pas injecter de commandes supplémentaires. Semgrep la signale quand même, ce qui est un faux positif. En revanche, nous avons ajouté [`runShellCheck()`](https://github.com/JosephSoufsaf/tika/blob/656acf92e3008eeec96af9a15b033c5d8c836289/tika-core/src/main/java/org/apache/tika/parser/external/ExternalParser.java#L293-L304), qui prend la commande depuis la configuration et l'ajoute directement dans une commande shell `sh -c`. Un shell interprète des caractères comme `;`, `|` et `&&`, donc une valeur de configuration comme `ffmpeg; rm -rf /data` fait exécuter au shell à la fois `command -v ffmpeg` et `rm -rf /data`, avec les permissions du processus Tika.
 
-A local scan of the modified file reported two findings, the existing one on line 193 and the new one on line 303:
+Une analyse locale du fichier modifié a signalé deux alertes, celle existante à la ligne 193 et la nouvelle à la ligne 303 :
 
 ```
 ❯❯❱ java.lang.security.audit.command-injection-process-builder.command-injection-process-builder
@@ -75,16 +75,15 @@ A local scan of the modified file reported two findings, the existing one on lin
       ⋮┆----------------------------------------
       303┆ new ProcessBuilder("sh", "-c", "command -v " + userCommand).start();
 ```
+Le commit qui ajoute cette deuxième vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43130652712) suivante. Dans le workflow, le job `semgrep` ne signale que la nouvelle alerte à la ligne 303 de `ExternalParser.java`. L'alerte à la ligne 193 fait partie de la base de référence originale de Tika, et la vulnérabilité 1 (`script-engine-injection`, ajoutée dans le commit précédent) fait partie de la base de référence de ce commit, donc aucune des deux n'est signalée de nouveau. Cela montre que le workflow n'échoue que sur les vulnérabilités introduites par le commit lui-même.
 
-The commit adding this second vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43130652712). In the workflow, the `semgrep` job reports only the new finding on line 303 of `ExternalParser.java`. The finding on line 193 is part of Tika's original baseline, and vulnerability 1 (`script-engine-injection`, added in the previous commit) is part of this commit's baseline, so neither is reported again. This shows that the workflow fails only on vulnerabilities introduced by the commit itself.
+## Vulnérabilité 3 : [Désérialisation non sécurisée](https://docs.semgrep.dev/learn/vulnerabilities/insecure-deserialization)
 
-## Vulnerability 3: [Insecure Deserialization](https://docs.semgrep.dev/learn/vulnerabilities/insecure-deserialization)
+Pour la troisième, nous avons filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Insecure Deserialization*. Nous avons choisi [`object-deserialization`](https://semgrep.dev/r?q=java.lang.security.audit.object-deserialization.object-deserialization), qui signale la lecture d'objets avec `ObjectInputStream`.
 
-For the third one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Insecure Deserialization*. We chose [`object-deserialization`](https://semgrep.dev/r?q=java.lang.security.audit.object-deserialization.object-deserialization), which flags reading objects with `ObjectInputStream`.
+Pour ce qui est du module, nous avons choisi `MimeTypesFactory` parce qu'il crée le registre `MimeTypes` et que `MimeTypes` est `Serializable`, comme nous le savions en ayant travaillé sur la Tâche 2. Une méthode qui charge un registre sérialisé mis en cache auparavant est une fonctionnalité réaliste à ajouter. Dans `MimeTypesFactory`, nous avons ajouté [`loadCachedMimeTypes()`](https://github.com/JosephSoufsaf/tika/blob/4a45b2da536acabdded1f35e7fb2a425e09e80a9/tika-core/src/main/java/org/apache/tika/mime/MimeTypesFactory.java#L208-L224), qui lit le registre depuis un flux avec `ObjectInputStream.readObject()`. La méthode `readObject()` reconstruit des objets Java arbitraires à partir des octets, donc si le flux n'est pas de confiance, un flux malveillant peut déclencher l'exécution de code avec les permissions du processus Tika.
 
-As for the module, we chose `MimeTypesFactory` because it creates the `MimeTypes` registry and `MimeTypes` is `Serializable`, as we knew from working on Tâche 2. A method that loads a previously cached, serialized registry is a realisitic feature to add. In `MimeTypesFactory`, we added [`loadCachedMimeTypes()`](https://github.com/JosephSoufsaf/tika/blob/4a45b2da536acabdded1f35e7fb2a425e09e80a9/tika-core/src/main/java/org/apache/tika/mime/MimeTypesFactory.java#L208-L224), which reads the registry from a stream with `ObjectInputStream.readObject()`. The method `readObject()` rebuilds arbitrary Java objects from the bytes, so if the stream is not trusted, a malicious stream can trigger code execution with the Tika process's permissions.
-
-A local scan of the modified file reported one finding:
+Une analyse locale du fichier modifié a signalé une alerte :
 
 ```
 ❯❱ java.lang.security.audit.object-deserialization.object-deserialization
@@ -99,15 +98,15 @@ A local scan of the modified file reported one finding:
       222┆ ObjectInputStream ois = new ObjectInputStream(in);
 ```
 
-The commit adding this third vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43239360394).
+Le commit qui ajoute cette troisième vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43239360394) suivante.
 
-## Vulnerability 4: [SQL Injection](https://docs.semgrep.dev/learn/vulnerabilities/sql-injection)
+## Vulnérabilité 4 : [Injection SQL](https://docs.semgrep.dev/learn/vulnerabilities/sql-injection)
 
-For the fourth one we again filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Injection*. We chose [`formatted-sql-string`](https://semgrep.dev/r?q=java.lang.security.audit.formatted-sql-string.formatted-sql-string), which flags a concatenated string passed to an SQL execution method.
+Pour la quatrième, nous avons de nouveau filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Injection*. Nous avons choisi [`formatted-sql-string`](https://semgrep.dev/r?q=java.lang.security.audit.formatted-sql-string.formatted-sql-string), qui signale une chaîne concaténée passée à une méthode d'exécution SQL.
 
-As for the module, we chose `Metadata` because it holds the key/value data Tika extracts from a document, and that data comes from the document itself so it can be controlled by whoever authors the document. A method that looks up a metadata value in a database is a realistic feature to add. In `Metadata`, we added [`findMetadataValue()`](https://github.com/JosephSoufsaf/tika/blob/19d22ddff82196c908b6af3097e8019f8f52aa65/tika-core/src/main/java/org/apache/tika/metadata/Metadata.java#L803-L819), which builds an SQL query by concatenating the metadata value into the query string instead of using a parameterized query. A document whose metadata contains SQL characters can change the meaning of the query and read or destroy data in the database.
+Pour ce qui est du module, nous avons choisi `Metadata` parce qu'il contient les données clé/valeur que Tika extrait d'un document, et ces données proviennent du document lui-même, donc elles peuvent être contrôlées par celui qui rédige le document. Une méthode qui recherche une valeur de métadonnée dans une base de données est une fonctionnalité réaliste à ajouter. Dans `Metadata`, nous avons ajouté [`findMetadataValue()`](https://github.com/JosephSoufsaf/tika/blob/19d22ddff82196c908b6af3097e8019f8f52aa65/tika-core/src/main/java/org/apache/tika/metadata/Metadata.java#L803-L819), qui construit une requête SQL en concaténant la valeur de métadonnée dans la chaîne de requête au lieu d'utiliser une requête paramétrée. Un document dont les métadonnées contiennent des caractères SQL peut changer le sens de la requête et lire ou détruire des données dans la base de données.
 
-A local scan of the modified file reported two findings on the same line, from two related SQL injection rules:
+Une analyse locale du fichier modifié a signalé deux alertes sur la même ligne, provenant de deux règles d'injection SQL liées :
 
 ```
 ❯❯❱ java.lang.security.audit.formatted-sql-string.formatted-sql-string
@@ -129,15 +128,15 @@ A local scan of the modified file reported two findings on the same line, from t
       818┆ statement.executeQuery(sql);
 ```
 
-Both findings describe the same vulnerability (the concatenated SQL string on line 818); `formatted-sql-string` and `jdbc-sqli` are two rules that detect the same pattern. The commit adding this fourth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43247760533).
+Les deux alertes décrivent la même vulnérabilité (la chaîne SQL concaténée à la ligne 818) ; `formatted-sql-string` et `jdbc-sqli` sont deux règles qui détectent le même motif. Le commit qui ajoute cette quatrième vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43247760533) suivante.
 
-## Vulnerability 5: Weak Hash (MD5)
+## Vulnérabilité 5 : Hachage faible (MD5)
 
-For the fifth one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Cryptographic Failures*. We chose [`use-of-md5`](https://semgrep.dev/r?q=java.lang.security.audit.crypto.use-of-md5.use-of-md5) which flags a call to `MessageDigest.getInstance("MD5")`. This vulnerability is also interesting to us because we studied MD5 and its weaknesses (collision attacks) in our IFT3275 (Sécurité Informatique) class.
+Pour la cinquième, nous avons filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Cryptographic Failures*. Nous avons choisi [`use-of-md5`](https://semgrep.dev/r?q=java.lang.security.audit.crypto.use-of-md5.use-of-md5), qui signale un appel à `MessageDigest.getInstance("MD5")`. Cette vulnérabilité nous intéresse aussi parce que nous avons étudié MD5 et ses faiblesses (attaques par collision) dans notre cours IFT3275 (Sécurité informatique).
 
-As for the module, we chose `InputStreamDigester` because its purpose is to compute a cryptographic digest over a document's content. Choosing a hash algorithm there is a normal part of its job, so selecting MD5 is a realistic mistake. In `InputStreamDigester`, we added [`md5Digest()`](https://github.com/JosephSoufsaf/tika/blob/35bdea7431c946bac9c315942ba658a2bcd805b6/tika-core/src/main/java/org/apache/tika/digest/InputStreamDigester.java#L121-L135), which computes the digest with `MessageDigest.getInstance("MD5")`. Given that MD5 is no longer collision resistant, an attacker can produce two different documents with the same MD5 digest. Thus, a digest used to verify a document’s integrity or to check whether two documents are identical can be bypassed.
+Pour ce qui est du module, nous avons choisi `InputStreamDigester` parce que son rôle est de calculer une empreinte cryptographique sur le contenu d'un document. Choisir un algorithme de hachage y fait partie de son fonctionnement normal, donc sélectionner MD5 est une erreur réaliste. Dans `InputStreamDigester`, nous avons ajouté [`md5Digest()`](https://github.com/JosephSoufsaf/tika/blob/35bdea7431c946bac9c315942ba658a2bcd805b6/tika-core/src/main/java/org/apache/tika/digest/InputStreamDigester.java#L121-L135), qui calcule l'empreinte avec `MessageDigest.getInstance("MD5")`. Étant donné que MD5 n'est plus résistant aux collisions, un attaquant peut produire deux documents différents ayant la même empreinte MD5. Ainsi, une empreinte utilisée pour vérifier l'intégrité d'un document ou pour déterminer si deux documents sont identiques peut être contournée.
 
-A local scan of the modified file reported one finding:
+Une analyse locale du fichier modifié a signalé une alerte :
 
 ```
 ❯❱ java.lang.security.audit.crypto.use-of-md5.use-of-md5
@@ -150,15 +149,15 @@ A local scan of the modified file reported one finding:
       132┆ MessageDigest md5Digest = MessageDigest.getInstance("MD5");
 ```
 
-The commit adding this fifth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43466654662).
+Le commit qui ajoute cette cinquième vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43466654662) suivante.
 
-## Vulnerability 6: Disabled Hostname Verification (TLS)
+## Vulnérabilité 6 : Vérification du nom d'hôte désactivée (TLS)
 
-For the sixth one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Identification and Authentication Failures*. We chose [`insecure-hostname-verifier`](https://semgrep.dev/r?q=insecure-hostname-verifier) which flags a `HostnameVerifier` whose `verify()` method accepts any host. This vulnerability is also interesting to us because we studied TLS and certificate verification in our IFT3325 (Téléinformatique) class.
+Pour la sixième, nous avons filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Identification and Authentication Failures*. Nous avons choisi [`insecure-hostname-verifier`](https://semgrep.dev/r?q=insecure-hostname-verifier), qui signale un `HostnameVerifier` dont la méthode `verify()` accepte n'importe quel hôte. Cette vulnérabilité nous intéresse aussi parce que nous avons étudié TLS et la vérification des certificats dans notre cours IFT3325 (Téléinformatique).
 
-As for the module, we chose `NetworkParser` because it fetches documents from remote servers (it is already the source of the baseline `unencrypted-socket` finding), so TLS connections are a normal part of its job. Skipping the hostname check is a realistic "shortcut" a developer might take to make a certificate error go away. In `NetworkParser`, we added [`AllHostsVerifier`](https://github.com/JosephSoufsaf/tika/blob/f797d07a0e5be58fcbd88390ab251c978f2d9755/tika-core/src/main/java/org/apache/tika/parser/NetworkParser.java#L172-L183), a `HostnameVerifier` whose `verify()` always returns `true`. A TLS certificate is supposed to prove that the server contacted really is the one that was requested. Verifying the hostname is part of that proof. Because this verifier accepts any host, that check is disabled, which lets a man-in-the-middle attacker present their own certificate and impersonate the server.
+Pour ce qui est du module, nous avons choisi `NetworkParser` parce qu'il récupère des documents depuis des serveurs distants (il est déjà la source de l'alerte `unencrypted-socket` de la base de référence), donc les connexions TLS font partie de son fonctionnement normal. Contourner la vérification du nom d'hôte est un « raccourci » réaliste qu'un développeur pourrait prendre pour faire disparaître une erreur de certificat. Dans `NetworkParser`, nous avons ajouté [`AllHostsVerifier`](https://github.com/JosephSoufsaf/tika/blob/f797d07a0e5be58fcbd88390ab251c978f2d9755/tika-core/src/main/java/org/apache/tika/parser/NetworkParser.java#L172-L183), un `HostnameVerifier` dont la méthode `verify()` retourne toujours `true`. Un certificat TLS est censé prouver que le serveur contacté est réellement celui qui a été demandé. Vérifier le nom d'hôte fait partie de cette preuve. Comme ce vérificateur accepte n'importe quel hôte, cette vérification est désactivée, ce qui permet à un attaquant de type « man-in-the-middle » de présenter son propre certificat et d'usurper l'identité du serveur.
 
-A local scan of the modified file reported the new finding (line 179) alongside the pre-existing `unencrypted-socket` finding (line 70):
+Une analyse locale du fichier modifié a signalé la nouvelle alerte (ligne 179) aux côtés de l'alerte `unencrypted-socket` préexistante (ligne 70) :
 
 ```
 ❯❱ java.lang.security.audit.crypto.unencrypted-socket.unencrypted-socket
@@ -183,15 +182,15 @@ A local scan of the modified file reported the new finding (line 179) alongside 
       183┆ }
 ```
 
-In the workflow, only the `insecure-hostname-verifier` finding on line 179 is reported as new; the `unencrypted-socket` finding is part of Tika's original baseline and is ignored. The commit adding this sixth vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43476113532).
+Dans le workflow, seule l'alerte `insecure-hostname-verifier` à la ligne 179 est signalée comme nouvelle ; l'alerte `unencrypted-socket` fait partie de la base de référence originale de Tika et est ignorée. Le commit qui ajoute cette sixième vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43476113532) suivante.
 
-## Vulnerability 7: Overly Permissive File Permissions
+## Vulnérabilité 7 : Permissions de fichier trop permissives
 
-For the seventh one we filtered the [rule registry](https://semgrep.dev/r) by searching for `java.lang.security` and filtered the OWASP for *Broken Access Control*. We chose [`overly-permissive-file-permission`](https://semgrep.dev/r?q=overly-permissive-file-permission) which flags giving read, write, and execute permission to all users (`rwxrwxrwx`). This vulnerability is also interesting to us because Unix file permissions and the principle of least privilege were covered in our IFT2245 (Systèmes d'exploitation) class.
+Pour la septième, nous avons filtré le [registre de règles](https://semgrep.dev/r) en cherchant `java.lang.security` et en filtrant l'OWASP sur *Broken Access Control*. Nous avons choisi [`overly-permissive-file-permission`](https://semgrep.dev/r?q=overly-permissive-file-permission), qui signale l'octroi des permissions de lecture, d'écriture et d'exécution à tous les utilisateurs (`rwxrwxrwx`). Cette vulnérabilité nous intéresse aussi parce que les permissions de fichier Unix et le principe du moindre privilège ont été abordés dans notre cours IFT2245 (Systèmes d'exploitation).
 
-As for the module, we chose `TemporaryResources` because its job is to create the temporary files Tika uses while parsing, and those files hold the content of the document being processed. Setting permissions on a temporary file there is a normal part of its job. In `TemporaryResources`, we added [`createSharedTempFile()`](https://github.com/JosephSoufsaf/tika/blob/818ac3695d70f5d8e4215d6a8ae5cc4819b1f6f2/tika-core/src/main/java/org/apache/tika/io/TemporaryResources.java#L209-L223), which creates a temporary file and then sets its permissions to `rwxrwxrwx`. The last three characters grant every other user on the machine read, write, and execute access, so any user can read the document content stored in the file or modify it while Tika is processing it. This breaks the principle of least privilege: a temporary file should only be accessible to the account that created it.
+Pour ce qui est du module, nous avons choisi `TemporaryResources` parce que son rôle est de créer les fichiers temporaires que Tika utilise pendant l'analyse, et ces fichiers contiennent le contenu du document en cours de traitement. Définir les permissions d'un fichier temporaire y fait partie de son fonctionnement normal. Dans `TemporaryResources`, nous avons ajouté [`createSharedTempFile()`](https://github.com/JosephSoufsaf/tika/blob/818ac3695d70f5d8e4215d6a8ae5cc4819b1f6f2/tika-core/src/main/java/org/apache/tika/io/TemporaryResources.java#L209-L223), qui crée un fichier temporaire puis définit ses permissions à `rwxrwxrwx`. Les trois derniers caractères accordent à tout autre utilisateur de la machine un accès en lecture, écriture et exécution, de sorte que n'importe quel utilisateur peut lire le contenu du document stocké dans le fichier ou le modifier pendant que Tika le traite. Cela enfreint le principe du moindre privilège : un fichier temporaire ne devrait être accessible qu'au compte qui l'a créé.
 
-A local scan of the modified file reported one finding:
+Une analyse locale du fichier modifié a signalé une alerte :
 
 ```
 ❯❱ java.lang.security.audit.overly-permissive-file-permission.overly-permissive-file-permission
@@ -207,27 +206,29 @@ A local scan of the modified file reported one finding:
       222┆     PosixFilePermissions.fromString("rwxrwxrwx"));
 ```
 
-The commit adding this seventh vulnerability is found in the following [run](https://github.com/JosephSoufsaf/tika/actions/runs/43719281541).
+Le commit qui ajoute cette septième vulnérabilité se trouve dans l'[exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43719281541) suivante.
 
-# Before vs. After
+# Avant vs. Après
 
-Before the additions, Semgrep reported 8 findings on `tika-core` ([semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)). After introducing the 7 vulnerabilities, it reports 16 findings ([semgrep-after.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-after/semgrep-after.txt)): the same 8 findings, plus 8 new ones.
+Avant les ajouts, Semgrep signalait 8 alertes sur `tika-core` ([semgrep-before.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-before/semgrep-before.txt)). Après l'introduction des 7 vulnérabilités, il en signale 16 ([semgrep-after.txt](https://github.com/JosephSoufsaf/tika/blob/tache3/semgrep-after/semgrep-after.txt)) : les 8 mêmes alertes, plus 8 nouvelles.
 
-The 8 new findings correspond to the 7 vulnerabilities; vulnerability 4 (SQL Injection) is reported by two rules on the same line (`formatted-sql-string` and `jdbc-sqli`), so it accounts for 2 of the 8.
+Les 8 nouvelles alertes correspondent aux 7 vulnérabilités ; la vulnérabilité 4 (Injection SQL) est signalée par deux règles sur la même ligne (`formatted-sql-string` et `jdbc-sqli`), elle compte donc pour 2 des 8.
 
-| # | Vulnerability | New rule | File | CWE | OWASP
+| # | Vulnérabilité | Nouvelle règle | Fichier | CWE | OWASP |
 |---|---|---|---|---|---|
-| 1 | Code Injection | `script-engine-injection` | `config/ConfigDeserializer.java` | CWE-94 | A03 – Injection |
-| 2 | Command Injection | `command-injection-process-builder` | `parser/external/ExternalParser.java` | CWE-78 | A03 – Injection |
-| 3 | Insecure Deserialization | `object-deserialization` | `mime/MimeTypesFactory.java` | CWE-502 | A08 – Software and Data Integrity Failures |
-| 4 | SQL Injection | `formatted-sql-string` + `jdbc-sqli` | `metadata/Metadata.java` | CWE-89 | A03 – Injection |
-| 5 | Weak Hash (MD5) | `use-of-md5` | `digest/InputStreamDigester.java` | CWE-328 | A02 – Cryptographic Failures |
-| 6 | Disabled Hostname Verification | `insecure-hostname-verifier` | `parser/NetworkParser.java` | CWE-295 | A07 – Identification and Authentication Failures |
-| 7 | Overly Permissive File Permissions | `overly-permissive-file-permission` | `io/TemporaryResources.java` | CWE-276 | A01 – Broken Access Control |
+| 1 | Injection de code | `script-engine-injection` | `config/ConfigDeserializer.java` | CWE-94 | A03 – Injection |
+| 2 | Injection de commande | `command-injection-process-builder` | `parser/external/ExternalParser.java` | CWE-78 | A03 – Injection |
+| 3 | Désérialisation non sécurisée | `object-deserialization` | `mime/MimeTypesFactory.java` | CWE-502 | A08 – Software and Data Integrity Failures |
+| 4 | Injection SQL | `formatted-sql-string` + `jdbc-sqli` | `metadata/Metadata.java` | CWE-89 | A03 – Injection |
+| 5 | Hachage faible (MD5) | `use-of-md5` | `digest/InputStreamDigester.java` | CWE-328 | A02 – Cryptographic Failures |
+| 6 | Vérification du nom d'hôte désactivée | `insecure-hostname-verifier` | `parser/NetworkParser.java` | CWE-295 | A07 – Identification and Authentication Failures |
+| 7 | Permissions de fichier trop permissives | `overly-permissive-file-permission` | `io/TemporaryResources.java` | CWE-276 | A01 – Broken Access Control |
 
-The seven vulnerabilities span seven distinct CWEs and five OWASP 2021 categories. Three of them fall under OWASP A03 (Injection), but they are different vulnerability types: Semgrep's own vulnerability overview page lists Code Injection, Command Injection, and SQL Injection as separate categories, each with a different target (a script engine, the operating system, and the database) and a different CWE.
+Les sept vulnérabilités couvrent sept CWE distincts et cinq catégories OWASP 2021. Trois d'entre elles relèvent de l'OWASP A03 (Injection), mais ce sont des types de vulnérabilités différents : la page de présentation des vulnérabilités de Semgrep elle-même répertorie l'injection de code, l'injection de commande et l'injection SQL comme des catégories distinctes, chacune ayant une cible différente (un moteur de script, le système d'exploitation et la base de données) et un CWE différent.
 
-The 8 original findings are never reported as new in any of the commit scans because they exist in both the baseline and the current code. Each vulnerability was added in its own commit, so on each push the workflow reported exactly the findings that commit introduced. A pull request into `main` would instead report all 8 new findings at once, since none of them exist on `main`.
+Semgrep attribue à chaque règle une sévérité : parmi les 8 alertes, 2 sont de sévérité ERROR (`formatted-sql-string` et `command-injection-process-builder`) et 6 sont de sévérité WARNING. Cette distinction n'affecte pas notre vérification, car l'option `--error` fait échouer le build dès qu'il y a une seule alerte, quelle que soit sa sévérité.
+
+Les 8 alertes originales ne sont jamais signalées comme nouvelles dans aucune des analyses de commit, car elles existent à la fois dans la base de référence et dans le code actuel. Chaque vulnérabilité a été ajoutée dans son propre commit, donc à chaque push le workflow signalait exactement les alertes que ce commit introduisait. Après avoir ajouté toutes les vulnérabilités une par une à l'aide de commits, nous avons fait une pull request vers `main` pour lister ensemble toutes les vulnérabilités ajoutées dans une seule [exécution](https://github.com/JosephSoufsaf/tika/actions/runs/43985817535).
 
 # Humour
 
@@ -267,6 +268,8 @@ Pour essayer vous-même, vous pouvez faire échouer n'importe quel test dans la 
 
 # Utilisation IA
 
-L’intelligence artificielle a été utilisée dans ce projet pour traduire en français certaines sections qui avaient été initialement rédigées en anglais.
+Claude a été utilisé pour énumérer plusieurs des vulnérabilités applicables ainsi que pour résumer les différents modules de `tika-core` dans le but de trouver les meilleurs emplacements pour les vulnérabilités. Parmi celles-ci, nous avons choisi celles qui avaient le plus de sens pour nous.
 
+Il a aussi écrit le script [`.github/scripts/semgrep-scan.sh`](https://github.com/JosephSoufsaf/tika/blob/tache3/.github/scripts/semgrep-scan.sh) à partir de mes consignes précisant ce que je voulais.
 
+On l'a également utilisé dans ce projet pour traduire en français certaines sections qui avaient été initialement rédigées en anglais.
